@@ -78,14 +78,17 @@
       let isViewer = false;
       let bothReady = false;
 
+      let imageApiPath = "https://images.ygoprodeck.com/images/cards/";
       let cardWidth = "12.5%";
+      let cardIds;
+      let cards = []; //holds own image objects for player 1/2, and all image objects for viewer
+                      //this seems ineffecient, and may not work as abilities are added, we'll see
+
+      let startButton = document.getElementById("start-game-button");
 
       let myReadyButton;
-      let startButton = document.getElementById("start-game-button");
       let myDrawButton;
       let myRerollButton;
-
-      let lastCardAdded;
 
       function checkIfBothReady() {
         let player1 = document.getElementById("player1-connection").innerHTML;
@@ -94,6 +97,7 @@
       }
 
       function readyButtonClicked(player) {
+        //player: "player1" or "player2"
         if (myReadyButton.innerHTML === "READY") {
           myReadyButton.innerHTML = "NOT READY";
           myReadyButton.style.backgroundColor = "darkred";
@@ -104,22 +108,44 @@
         socket.emit("ready-change", player, myReadyButton.innerHTML);
       }
 
-      function setDrawnCard(playerSide, drawCard, setMouseOver) {
+      function setDrawnCard(playerSide, drawCard, samePlayer) {
+        //playerSide: div that coretMouseOverrelates with the users side
+        //drawCard: String, path to the image to display
+        //samePlayer: if the player calling this function is the same one that had drawn the card
         let newCard = document.createElement("img");
         newCard.src = drawCard;
         newCard.style.width = cardWidth;
-        if (setMouseOver) {
-          newCard.onmouseover = () => {
-            let middleCard = document.getElementById("middle-card");
-            middleCard.src = newCard.src;
-          };
-          newCard.onmouseleave = () => {
-            let middleCard = document.getElementById("middle-card");
-            middleCard.src = "/public/images/back.png";
-          };
+        newCard.onmouseover = () => {
+          let middleCard = document.getElementById("middle-card");
+          middleCard.src = newCard.src;
+        };
+        newCard.onmouseleave = () => {
+          let middleCard = document.getElementById("middle-card");
+          middleCard.src = "/public/images/back.png";
+        };
+        if (samePlayer) {
+          cards.push(newCard);
         }
-        lastCardAdded = newCard;
         playerSide.appendChild(newCard);
+      }
+
+      function setMyButtons(player) {
+        //player: String, "player1" or "player2"
+        myReadyButton = document.getElementById(player + "-ready-button");
+        myReadyButton.style.display = "block";
+        myReadyButton.addEventListener("click", () => {
+          readyButtonClicked(player);
+        });
+        myDrawButton = document.getElementById(player + "-draw-card");
+        myDrawButton.addEventListener("click", () => {
+          socket.emit("draw-card", isPlayer1);
+          myDrawButton.style.display = "none";
+          myRerollButton.style.display = "none";
+        });
+        myRerollButton = document.getElementById(player + "-reroll-card");
+        myRerollButton.addEventListener("click", () => {
+          socket.emit("reroll", isPlayer1);
+        });
       }
 
       startButton.addEventListener("click", () => {
@@ -147,31 +173,13 @@
       socket.on("player1", (id) => {
         console.log("received player 1 on client: " + id);
         isPlayer1 = true;
-        myReadyButton = document.getElementById("player1-ready-button");
-        myReadyButton.style.display = "block";
-        myReadyButton.addEventListener("click", () => {
-          readyButtonClicked("player1");
-        });
-        myDrawButton = document.getElementById("player1-draw-card");
-        myDrawButton.addEventListener("click", () => {
-          socket.emit("draw-card", isPlayer1);
-        });
-        myRerollButton = document.getElementById("player1-reroll-card");
+        setMyButtons("player1");
       });
 
       socket.on("player2", (id) => {
         isPlayer2 = socket.id === id;
         if (isPlayer2) {
-          myReadyButton = document.getElementById("player2-ready-button");
-          myReadyButton.style.display = "block";
-          myReadyButton.addEventListener("click", () => {
-            readyButtonClicked("player2");
-          });
-          myDrawButton = document.getElementById("player2-draw-card");
-          myDrawButton.addEventListener("click", () => {
-            socket.emit("draw-card", isPlayer1);
-          });
-          myRerollButton = document.getElementById("player2-reroll-card");
+          setMyButtons("player2");
         } else {
           socket.emit("ready-change", "player1", myReadyButton.innerHTML);
         }
@@ -180,6 +188,7 @@
       socket.on("viewer", (id) => {
         isViewer = id === socket.id;
         if (isPlayer1 || isPlayer2) {
+          //sends current "READY" status of the players to the viewer
           socket.emit(
             "ready-change",
             isPlayer1 ? "player1" : "player2",
@@ -197,23 +206,19 @@
       socket.on("draw-card", (player1, drawCard) => {
         let playerSide;
         let newCardPath;
-        let setMouseOver = isPlayer1 === player1;
+        let samePlayer = isPlayer1 === player1;
         if (isViewer) {
-          newCardPath =
-            "https://images.ygoprodeck.com/images/cards/" + drawCard + ".jpg";
+          newCardPath = imageApiPath + drawCard + ".jpg";
           playerSide = document.getElementById(
             (player1 ? "player1" : "player2") + "-play-side"
           );
-          setMouseOver = true;
+          samePlayer = true;
         } else if (isPlayer1 === player1) {
           //player that drew a card
-          newCardPath =
-            "https://images.ygoprodeck.com/images/cards/" + drawCard + ".jpg";
+          newCardPath = imageApiPath + drawCard + ".jpg";
           playerSide = document.getElementById(
             (isPlayer1 ? "player1" : "player2") + "-play-side"
           );
-          myDrawButton.style.display = "none";
-          myRerollButton.style.display = "none";
         } else {
           //not the player that drew a card
           newCardPath = "/public/images/back.png";
@@ -223,7 +228,16 @@
           myDrawButton.style.display = "flex";
           myRerollButton.style.display = "flex";
         }
-        setDrawnCard(playerSide, newCardPath, setMouseOver);
+        setDrawnCard(playerSide, newCardPath, samePlayer);
+      });
+
+      socket.on("reroll", (newCardId, player1) => {
+        if (cards.length === 0) return;
+        if (cards.length < 2 && isViewer) return;
+        if (isViewer || isPlayer1 === player1) {
+          let subtraction = isViewer ? 2 : 1;
+          cards[cards.length - subtraction].src = imageApiPath + newCardId + ".jpg";
+        }
       });
     </script>
   </body>

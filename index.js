@@ -40,6 +40,10 @@ io.on("connection", (socket) => {
     io.emit("draw-card", isPlayer1, drawCard);
   });
 
+  socket.on("reroll", (isPlayer1) => {
+    io.emit("reroll", cardFunctions.getRandomCard(ids), isPlayer1);
+  });
+
   socket.on("disconnect", () => {
     players = players.filter((player) => player.id !== socket.id);
     io.emit("disconnected", socket.id, players);
