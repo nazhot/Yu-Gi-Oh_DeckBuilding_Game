@@ -167,31 +167,42 @@
         } else {
           socket.emit("ready-change", "player1", player1ReadyButton.innerHTML);
         }
-        console.log("player 2 for " + id + " set to " + isPlayer2);
       });
 
+      socket.on("viewer", (id) => {
+        isViewer = id === socket.id;
+        if (isPlayer1){
+          socket.emit("ready-change", "player1", player1ReadyButton.innerHTML);
+        }
+        if (isPlayer2){
+          socket.emit("ready-change", "player2", player2ReadyButton.innerHTML);
+        }
+      });
       socket.on("draw-card", (player1, drawCard) => {
         let playerSide;
         let newCardPath;
         let setMouseOver = isPlayer1 === player1;
-        if (isPlayer1 === player1) {
+        if (isViewer){
+          newCardPath = "https://images.ygoprodeck.com/images/cards/" + drawCard + ".jpg";
+          playerSide = document.getElementById((player1 ? "player1" : "player2") + "-play-side");
+          setMouseOver = true;
+        }
+        else if (isPlayer1 === player1) {
           //player that drew a card
           newCardPath = "https://images.ygoprodeck.com/images/cards/" + drawCard + ".jpg";
+          playerSide = document.getElementById((isPlayer1 ? "player1" : "player2") + "-play-side");
           if (isPlayer1) {
-            playerSide = document.getElementById("player1-play-side");
             player1DrawButton.style.display = "none";
           } else {
-            playerSide = document.getElementById("player2-play-side");
             player2DrawButton.style.display = "none";
           }
         } else {
           //not the player that drew a card
           newCardPath = "/public/images/back.png";
+          playerSide = document.getElementById((isPlayer1 ? "player2" : "player1") + "-play-side");
           if (isPlayer1) {
-            playerSide = document.getElementById("player2-play-side");
             player1DrawButton.style.display = "flex";
           } else {
-            playerSide = document.getElementById("player1-play-side");
             player2DrawButton.style.display = "flex";
           }
         }
