@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/public/css/style.css" />
-    <script src="/functions.js"></script>
+    <script src="/cardFunctions.js"></script>
   </head>
   <body>
     <div id="loading-screen">
@@ -42,6 +42,13 @@
         >
           Draw Card
         </button>
+        <button
+          id="player1-reroll-card"
+          class="reroll-card-button"
+          style="display: none"
+        >
+          Re-Roll
+        </button>
       </div>
       <div id="card-and-powerups">
         <img src="/public/images/back.png" id="middle-card" />
@@ -53,6 +60,13 @@
           style="display: none"
         >
           Draw Card
+        </button>
+        <button
+          id="player2-reroll-card"
+          class="reroll-card-button"
+          style="display: none"
+        >
+          Re-Roll
         </button>
       </div>
     </div>
@@ -66,37 +80,12 @@
 
       let cardWidth = "12.5%";
 
-      let player1ReadyButton = document.getElementById("player1-ready-button");
-      let player2ReadyButton = document.getElementById("player2-ready-button");
+      let myReadyButton;
       let startButton = document.getElementById("start-game-button");
-      let player1DrawButton = document.getElementById("player1-draw-card");
-      let player2DrawButton = document.getElementById("player2-draw-card");
+      let myDrawButton;
+      let myRerollButton;
 
-      player1ReadyButton.addEventListener("click", () => {
-        readyButtonClicked("player1");
-      });
-      player2ReadyButton.addEventListener("click", () => {
-        readyButtonClicked("player2");
-      });
-
-      startButton.addEventListener("click", () => {
-        socket.emit("start-game");
-        player1DrawButton.style.display = "flex";
-      });
-
-      player1DrawButton.addEventListener("click", () => {
-        socket.emit("draw-card", isPlayer1);
-      });
-
-      player2DrawButton.addEventListener("click", () => {
-        socket.emit("draw-card", isPlayer1);
-      });
-
-      socket.on("start-game", () => {
-        document.getElementById("loading-screen").style.display = "none";
-        document.getElementById("playing-screen").style.display =
-          "inline-block";
-      });
+      let lastCardAdded;
 
       function checkIfBothReady() {
         let player1 = document.getElementById("player1-connection").innerHTML;
@@ -105,16 +94,14 @@
       }
 
       function readyButtonClicked(player) {
-        let button = document.getElementById(player + "-ready-button");
-        console.log(button);
-        if (button.innerHTML === "READY") {
-          button.innerHTML = "NOT READY";
-          button.style.backgroundColor = "darkred";
+        if (myReadyButton.innerHTML === "READY") {
+          myReadyButton.innerHTML = "NOT READY";
+          myReadyButton.style.backgroundColor = "darkred";
         } else {
-          button.innerHTML = "READY";
-          button.style.backgroundColor = "darkgreen";
+          myReadyButton.innerHTML = "READY";
+          myReadyButton.style.backgroundColor = "darkgreen";
         }
-        socket.emit("ready-change", player, button.innerHTML);
+        socket.emit("ready-change", player, myReadyButton.innerHTML);
       }
 
       function setDrawnCard(playerSide, drawCard, setMouseOver) {
@@ -131,8 +118,15 @@
             middleCard.src = "/public/images/back.png";
           };
         }
+        lastCardAdded = newCard;
         playerSide.appendChild(newCard);
       }
+
+      startButton.addEventListener("click", () => {
+        socket.emit("start-game");
+        myDrawButton.style.display = "flex";
+        myRerollButton.style.display = "flex";
+      });
 
       socket.on("ready-change", (player, readyText) => {
         let readyTextComponent = document.getElementById(
@@ -153,58 +147,81 @@
       socket.on("player1", (id) => {
         console.log("received player 1 on client: " + id);
         isPlayer1 = true;
-        let myButton = document.getElementById("player1-ready-button");
-        myButton.style.display = "block";
+        myReadyButton = document.getElementById("player1-ready-button");
+        myReadyButton.style.display = "block";
+        myReadyButton.addEventListener("click", () => {
+          readyButtonClicked("player1");
+        });
+        myDrawButton = document.getElementById("player1-draw-card");
+        myDrawButton.addEventListener("click", () => {
+          socket.emit("draw-card", isPlayer1);
+        });
+        myRerollButton = document.getElementById("player1-reroll-card");
       });
 
       socket.on("player2", (id) => {
         isPlayer2 = socket.id === id;
         if (isPlayer2) {
-          let myButton = document.getElementById("player2-ready-button");
-          let opponentButton = document.getElementById("player1-ready-button");
-          myButton.style.display = "block";
-          opponentButton.style.display = "none";
+          myReadyButton = document.getElementById("player2-ready-button");
+          myReadyButton.style.display = "block";
+          myReadyButton.addEventListener("click", () => {
+            readyButtonClicked("player2");
+          });
+          myDrawButton = document.getElementById("player2-draw-card");
+          myDrawButton.addEventListener("click", () => {
+            socket.emit("draw-card", isPlayer1);
+          });
+          myRerollButton = document.getElementById("player2-reroll-card");
         } else {
-          socket.emit("ready-change", "player1", player1ReadyButton.innerHTML);
+          socket.emit("ready-change", "player1", myReadyButton.innerHTML);
         }
       });
 
       socket.on("viewer", (id) => {
         isViewer = id === socket.id;
-        if (isPlayer1){
-          socket.emit("ready-change", "player1", player1ReadyButton.innerHTML);
-        }
-        if (isPlayer2){
-          socket.emit("ready-change", "player2", player2ReadyButton.innerHTML);
+        if (isPlayer1 || isPlayer2) {
+          socket.emit(
+            "ready-change",
+            isPlayer1 ? "player1" : "player2",
+            myReadyButton.innerHTML
+          );
         }
       });
+
+      socket.on("start-game", () => {
+        document.getElementById("loading-screen").style.display = "none";
+        document.getElementById("playing-screen").style.display =
+          "inline-block";
+      });
+
       socket.on("draw-card", (player1, drawCard) => {
         let playerSide;
         let newCardPath;
         let setMouseOver = isPlayer1 === player1;
-        if (isViewer){
-          newCardPath = "https://images.ygoprodeck.com/images/cards/" + drawCard + ".jpg";
-          playerSide = document.getElementById((player1 ? "player1" : "player2") + "-play-side");
+        if (isViewer) {
+          newCardPath =
+            "https://images.ygoprodeck.com/images/cards/" + drawCard + ".jpg";
+          playerSide = document.getElementById(
+            (player1 ? "player1" : "player2") + "-play-side"
+          );
           setMouseOver = true;
-        }
-        else if (isPlayer1 === player1) {
+        } else if (isPlayer1 === player1) {
           //player that drew a card
-          newCardPath = "https://images.ygoprodeck.com/images/cards/" + drawCard + ".jpg";
-          playerSide = document.getElementById((isPlayer1 ? "player1" : "player2") + "-play-side");
-          if (isPlayer1) {
-            player1DrawButton.style.display = "none";
-          } else {
-            player2DrawButton.style.display = "none";
-          }
+          newCardPath =
+            "https://images.ygoprodeck.com/images/cards/" + drawCard + ".jpg";
+          playerSide = document.getElementById(
+            (isPlayer1 ? "player1" : "player2") + "-play-side"
+          );
+          myDrawButton.style.display = "none";
+          myRerollButton.style.display = "none";
         } else {
           //not the player that drew a card
           newCardPath = "/public/images/back.png";
-          playerSide = document.getElementById((isPlayer1 ? "player2" : "player1") + "-play-side");
-          if (isPlayer1) {
-            player1DrawButton.style.display = "flex";
-          } else {
-            player2DrawButton.style.display = "flex";
-          }
+          playerSide = document.getElementById(
+            (isPlayer1 ? "player2" : "player1") + "-play-side"
+          );
+          myDrawButton.style.display = "flex";
+          myRerollButton.style.display = "flex";
         }
         setDrawnCard(playerSide, newCardPath, setMouseOver);
       });

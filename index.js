@@ -5,10 +5,13 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
 const fs = require("fs");
+const cardFunctions = require("./cardFunctions");
 
 app.use(express.static(__dirname));
 
 let players = [];
+let idFile = fs.readFileSync("./public/cards/ids.txt", "utf-8");
+let ids = idFile.split("\n");
 
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/index.html");
@@ -33,9 +36,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("draw-card", (isPlayer1) => {
-    let idFile = fs.readFileSync("./public/cards/ids.txt", "utf-8");
-    let ids = idFile.split("\n");
-    let drawCard = ids[Math.floor(Math.random() * ids.length)];
+    let drawCard = cardFunctions.getRandomCard(ids);
     io.emit("draw-card", isPlayer1, drawCard);
   });
 
