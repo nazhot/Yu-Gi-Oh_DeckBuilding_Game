@@ -8,22 +8,22 @@ A tool for adding another layer on top of the Yu-Gi-Oh card game! 2 players can 
 v0.0.1
 - Ugly as can be
 - Two users can connect to the server, and ready/unready up
+- Player 1 can set Card / Ban list, from the pre-determined list hosted on server
 - When both are ready, player 1 can start game
 - During game, players can go back and forth drawing 1 random card at a time
   - Card is completely random at the moment
   - Other player only sees that you drew a card, not what card it was
+ - Viewers are allowed
+  - See both players full decks, prone to cheating if you are a dishonest cotton headed mini muffin
   
 ## Previous Versions
 N/A
 
 ## Hopeful Features
 - Less ugly
-- Viewers that can just watch the players
 - When connecting, user can input a username to go by
   - Have this information stored for repeated connecting
 - Global settings for player 1 to set
-  - Card List
-  - Ban List
   - Set List (cards that are auto-given to both players before game starts)
 - Ability for players to upload their own card/ban/set list for use
 - Settings for both players on start screen
