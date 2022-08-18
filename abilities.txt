@@ -1,0 +1,15 @@
+Targets:
+    -your last card
+    -opponents last card
+    -your last (n) cards
+    -opponent's last (n) cards
+    -your opponent's last ability
+    -your last ability
+
+Costs:
+    -Skip next turn? (not really a cost)
+    -No powerup next turn
+    -Opponent sees a card of yours
+    -Opponent gets to see (n) cards and discard (x)
+    -Opponent gets additional reroll
+    

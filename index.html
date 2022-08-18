@@ -20,6 +20,30 @@
           NOT READY
         </button>
         <button id="start-game-button" style="display: none">START GAME</button>
+        <label for="card-list-select" id="card-list-label" style="display: none"
+          >Card List:</label
+        >
+        <select
+          name="card-list-select"
+          id="card-list-select"
+          style="display: none"
+        ></select>
+        <label for="ban-list-select" id="ban-list-label" style="display: none"
+          >Ban List:</label
+        >
+        <select
+          name="ban-list-select"
+          id="ban-list-select"
+          style="display: none"
+        ></select>
+        <label for="set-list-select" id="set-list-label" style="display: none"
+          >Set List:</label
+        >
+        <select
+          name="set-list-select"
+          id="set-list-select"
+          style="display: none"
+        ></select>
       </div>
       <div id="player2-side" class="side2">
         <p style="display: inline-block">Player Two:</p>
@@ -46,9 +70,7 @@
           id="player1-reroll-card"
           class="reroll-card-button"
           style="display: none"
-        >
-          Re-Roll
-        </button>
+        ></button>
       </div>
       <div id="card-and-powerups">
         <img src="/public/images/back.png" id="middle-card" />
@@ -65,9 +87,7 @@
           id="player2-reroll-card"
           class="reroll-card-button"
           style="display: none"
-        >
-          Re-Roll
-        </button>
+        ></button>
       </div>
     </div>
     <script src="/socket.io/socket.io.js"></script>
@@ -77,12 +97,19 @@
       let isPlayer2 = false;
       let isViewer = false;
       let bothReady = false;
-
+      let numRerolls = 5;
+      let listNames = ["card", "ban", "set"];
+      let dropDowns = {}; //holder for the three drop downs, since they're so similar in name
+      for (let i = 0; i < listNames.length; i++) {
+        dropDowns[listNames[i]] = document.getElementById(
+          listNames[i] + "-list-select"
+        );
+      }
       let imageApiPath = "https://images.ygoprodeck.com/images/cards/";
       let cardWidth = "12.5%";
-      let cardIds;
       let cards = []; //holds own image objects for player 1/2, and all image objects for viewer
-                      //this seems ineffecient, and may not work as abilities are added, we'll see
+      //this seems ineffecient, and may not work as abilities are added, we'll see
+      //server can't directly affect components FYI
 
       let startButton = document.getElementById("start-game-button");
 
@@ -108,12 +135,14 @@
         socket.emit("ready-change", player, myReadyButton.innerHTML);
       }
 
-      function setDrawnCard(playerSide, drawCard, samePlayer) {
+      function setDrawnCard(playerSide, drawCard, samePlayer, cardId) {
         //playerSide: div that coretMouseOverrelates with the users side
         //drawCard: String, path to the image to display
         //samePlayer: if the player calling this function is the same one that had drawn the card
+        //cardId: just the id of the card, to be stored in the alt of the image, for updating counts on server side if rerolled
         let newCard = document.createElement("img");
         newCard.src = drawCard;
+        newCard.alt = cardId;
         newCard.style.width = cardWidth;
         newCard.onmouseover = () => {
           let middleCard = document.getElementById("middle-card");
@@ -144,12 +173,29 @@
         });
         myRerollButton = document.getElementById(player + "-reroll-card");
         myRerollButton.addEventListener("click", () => {
-          socket.emit("reroll", isPlayer1);
+          if (numRerolls > 0) {
+            socket.emit("reroll", isPlayer1, cards[cards.length - 1].alt);
+          }
         });
+        myRerollButton.innerHTML = "Re-Roll (" + numRerolls + ")";
+        if (player === "player1") {
+          for (let i = 0; i < listNames.length; i++) {
+            dropDowns[listNames[i]].style.display = "flex";
+            document.getElementById(
+              listNames[i] + "-list-label"
+            ).style.display = "flex";
+          }
+          socket.emit("getLists");
+        }
       }
 
       startButton.addEventListener("click", () => {
-        socket.emit("start-game");
+        socket.emit(
+          "start-game",
+          dropDowns.card.value,
+          dropDowns.ban.value,
+          dropDowns.set.value
+        );
         myDrawButton.style.display = "flex";
         myRerollButton.style.display = "flex";
       });
@@ -174,6 +220,24 @@
         console.log("received player 1 on client: " + id);
         isPlayer1 = true;
         setMyButtons("player1");
+      });
+
+      socket.on("setLists", (cardLists, banLists, setLists) => {
+        let lists = {
+          card: cardLists,
+          ban: banLists,
+          set: setLists,
+        };
+        for (let i = 0; i < listNames.length; i++) {
+          let listName = listNames[i]; //card, ban, set
+          for (let j = 0; j < lists[listName].length; j++) {
+            let list = lists[listName];
+            let newEntry = document.createElement("option");
+            newEntry.value = list[j];
+            newEntry.innerHTML = list[j];
+            dropDowns[listName].appendChild(newEntry);
+          }
+        }
       });
 
       socket.on("player2", (id) => {
@@ -207,6 +271,7 @@
         let playerSide;
         let newCardPath;
         let samePlayer = isPlayer1 === player1;
+        let cardId = drawCard;
         if (isViewer) {
           newCardPath = imageApiPath + drawCard + ".jpg";
           playerSide = document.getElementById(
@@ -222,13 +287,14 @@
         } else {
           //not the player that drew a card
           newCardPath = "/public/images/back.png";
+          cardId = "-1";
           playerSide = document.getElementById(
             (isPlayer1 ? "player2" : "player1") + "-play-side"
           );
           myDrawButton.style.display = "flex";
           myRerollButton.style.display = "flex";
         }
-        setDrawnCard(playerSide, newCardPath, samePlayer);
+        setDrawnCard(playerSide, newCardPath, samePlayer, cardId);
       });
 
       socket.on("reroll", (newCardId, player1) => {
@@ -236,7 +302,11 @@
         if (cards.length < 2 && isViewer) return;
         if (isViewer || isPlayer1 === player1) {
           let subtraction = isViewer ? 2 : 1;
-          cards[cards.length - subtraction].src = imageApiPath + newCardId + ".jpg";
+          cards[cards.length - subtraction].src =
+            imageApiPath + newCardId + ".jpg";
+          cards[cards.length - subtraction].alt = newCardId;
+          numRerolls--;
+          myRerollButton.innerHTML = "Re-Roll (" + numRerolls + ")";
         }
       });
     </script>
