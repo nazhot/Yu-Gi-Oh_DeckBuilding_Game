@@ -92,30 +92,33 @@
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-      let socket = io();
-      let isPlayer1 = false;
-      let isPlayer2 = false;
-      let isViewer = false;
-      let bothReady = false;
+      let socket     = io();
+      let isPlayer1  = false;
+      let isPlayer2  = false;
+      let isViewer   = false;
+      let bothReady  = false;
       let numRerolls = 5;
-      let listNames = ["card", "ban", "set"];
-      let dropDowns = {}; //holder for the three drop downs, since they're so similar in name
-      for (let i = 0; i < listNames.length; i++) {
-        dropDowns[listNames[i]] = document.getElementById(
-          listNames[i] + "-list-select"
-        );
-      }
-      let imageApiPath = "https://images.ygoprodeck.com/images/cards/";
-      let cardWidth = "12.5%";
-      let cards = []; //holds own image objects for player 1/2, and all image objects for viewer
-      //this seems ineffecient, and may not work as abilities are added, we'll see
-      //server can't directly affect components FYI
+      let listNames  = ["card", "ban", "set"]; //names used to get all dropdown information
+      let dropDowns  = {}; //holder for the three drop down elements, since they're so similar in name
+
+      let imageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics/"
+      let cardWidth    = "12.5%";
+      let cards        = []; //holds own image objects for player 1/2, and all image objects for viewer
+                             //this seems ineffecient, and may not work as abilities are added, we'll see
+                             //server can't directly affect components FYI
 
       let startButton = document.getElementById("start-game-button");
 
       let myReadyButton;
       let myDrawButton;
       let myRerollButton;
+
+      //setup the dropDowns object with the dropdown elements
+      for (let i = 0; i < listNames.length; i++) {
+        dropDowns[listNames[i]] = document.getElementById(
+          listNames[i] + "-list-select"
+        );
+      }
 
       function checkIfBothReady() {
         let player1 = document.getElementById("player1-connection").innerHTML;
@@ -126,24 +129,27 @@
       function readyButtonClicked(player) {
         //player: "player1" or "player2"
         if (myReadyButton.innerHTML === "READY") {
-          myReadyButton.innerHTML = "NOT READY";
+          myReadyButton.innerHTML             = "NOT READY";
           myReadyButton.style.backgroundColor = "darkred";
         } else {
-          myReadyButton.innerHTML = "READY";
+          myReadyButton.innerHTML             = "READY";
           myReadyButton.style.backgroundColor = "darkgreen";
         }
+        //send out message so that other player/viewer can see your current status
         socket.emit("ready-change", player, myReadyButton.innerHTML);
       }
 
       function setDrawnCard(playerSide, drawCard, samePlayer, cardId) {
-        //playerSide: div that coretMouseOverrelates with the users side
-        //drawCard: String, path to the image to display
-        //samePlayer: if the player calling this function is the same one that had drawn the card
-        //cardId: just the id of the card, to be stored in the alt of the image, for updating counts on server side if rerolled
+        //playerSide: dom element, div that correlates with the users side
+        //drawCard:   String,      path to the card image to display
+        //samePlayer: boolean,     if the player calling this function is the same one that had drawn the card
+        //cardId:     String,      the id of the card, to be stored in the alt of the image, for updating counts on server side if rerolled
         let newCard = document.createElement("img");
         newCard.src = drawCard;
         newCard.alt = cardId;
         newCard.style.width = cardWidth;
+        //when moused over, show the image in the middle card
+        //when not moused over, default to card back
         newCard.onmouseover = () => {
           let middleCard = document.getElementById("middle-card");
           middleCard.src = newCard.src;
@@ -160,87 +166,58 @@
 
       function setMyButtons(player) {
         //player: String, "player1" or "player2"
-        myReadyButton = document.getElementById(player + "-ready-button");
+        myReadyButton               = document.getElementById(player + "-ready-button");
         myReadyButton.style.display = "block";
         myReadyButton.addEventListener("click", () => {
           readyButtonClicked(player);
         });
+
         myDrawButton = document.getElementById(player + "-draw-card");
         myDrawButton.addEventListener("click", () => {
           socket.emit("draw-card", isPlayer1);
           myDrawButton.style.display = "none";
           myRerollButton.style.display = "none";
         });
+
         myRerollButton = document.getElementById(player + "-reroll-card");
         myRerollButton.addEventListener("click", () => {
+          //number of rerolls left is checked here to avoid any issues server side, since it can't readily check, it'd have to be told
+          //numRerolls is decremented when socket recieves the reroll message
           if (numRerolls > 0) {
             socket.emit("reroll", isPlayer1, cards[cards.length - 1].alt);
           }
         });
         myRerollButton.innerHTML = "Re-Roll (" + numRerolls + ")";
+        //only player 1 has the dropdown optoins, so if player 1 is setting up their buttons, make the dropdowns visible
         if (player === "player1") {
           for (let i = 0; i < listNames.length; i++) {
             dropDowns[listNames[i]].style.display = "flex";
-            document.getElementById(
-              listNames[i] + "-list-label"
-            ).style.display = "flex";
+            document.getElementById(listNames[i] + "-list-label").style.display = "flex";
           }
           socket.emit("getLists");
         }
       }
 
       startButton.addEventListener("click", () => {
-        socket.emit(
-          "start-game",
-          dropDowns.card.value,
-          dropDowns.ban.value,
-          dropDowns.set.value
-        );
-        myDrawButton.style.display = "flex";
+        socket.emit("start-game", dropDowns.card.value, dropDowns.ban.value, dropDowns.set.value);
+        myDrawButton.style.display   = "flex";
         myRerollButton.style.display = "flex";
       });
 
-      socket.on("ready-change", (player, readyText) => {
-        let readyTextComponent = document.getElementById(
-          player + "-connection"
-        );
-        readyTextComponent.innerHTML = readyText;
-        if (isPlayer1) {
-          bothReady = checkIfBothReady();
-          let startButton = document.getElementById("start-game-button");
-          if (bothReady) {
-            startButton.style.display = "block";
-          } else {
-            startButton.style.display = "none";
-          }
-        }
-      });
+
+
 
       socket.on("player1", (id) => {
-        console.log("received player 1 on client: " + id);
+        //only player receiving this message is player 1, since the trigger to send it is 1 person connected
+        //no need to check for anything to run this
         isPlayer1 = true;
         setMyButtons("player1");
       });
 
-      socket.on("setLists", (cardLists, banLists, setLists) => {
-        let lists = {
-          card: cardLists,
-          ban: banLists,
-          set: setLists,
-        };
-        for (let i = 0; i < listNames.length; i++) {
-          let listName = listNames[i]; //card, ban, set
-          for (let j = 0; j < lists[listName].length; j++) {
-            let list = lists[listName];
-            let newEntry = document.createElement("option");
-            newEntry.value = list[j];
-            newEntry.innerHTML = list[j];
-            dropDowns[listName].appendChild(newEntry);
-          }
-        }
-      });
-
       socket.on("player2", (id) => {
+        //if message is received by player 2, set their buttons
+        //if message is received by player 1, let player 2 know your ready status 
+        //viewer won't receieve this, message is sent out when 2 people are connected
         isPlayer2 = socket.id === id;
         if (isPlayer2) {
           setMyButtons("player2");
@@ -253,45 +230,78 @@
         isViewer = id === socket.id;
         if (isPlayer1 || isPlayer2) {
           //sends current "READY" status of the players to the viewer
-          socket.emit(
-            "ready-change",
-            isPlayer1 ? "player1" : "player2",
-            myReadyButton.innerHTML
-          );
+          socket.emit("ready-change", isPlayer1 ? "player1" : "player2", myReadyButton.innerHTML);
+        }
+      });
+
+      socket.on("ready-change", (player, readyText) => {
+        //player:    String, "player1" or "player2", whoever clicked their ready button
+        //readyText: String, "READY" or "NOT READY", whatever the button's text value now is
+        let readyTextComponent = document.getElementById(player + "-connection");
+        readyTextComponent.innerHTML = readyText;
+        //if client is player1, additional check has to be done to see if both players are ready and start button should be shown
+        if (isPlayer1) {
+          bothReady = checkIfBothReady();
+          if (bothReady) {
+            startButton.style.display = "block";
+          } else {
+            startButton.style.display = "none";
+          }
+        }
+      });
+
+      socket.on("setLists", (cardLists, banLists, setLists) => {
+        //all lists are arrays, pertaining to the names of the files for each one
+        //used to set the drop down entries
+        let lists = {
+          card: cardLists,
+          ban: banLists,
+          set: setLists,
+        };
+        for (let i = 0; i < listNames.length; i++) {
+          let listName = listNames[i]; //card, ban, set
+          for (let j = 0; j < lists[listName].length; j++) {
+            let list     = lists[listName];
+            let newEntry = document.createElement("option");
+
+            newEntry.value     = list[j];
+            newEntry.innerHTML = list[j];
+
+            dropDowns[listName].appendChild(newEntry);
+          }
         }
       });
 
       socket.on("start-game", () => {
+        //player 1 takes care of making the right buttons visible when they click the start button
+        //no need to do so here, just change the screen
         document.getElementById("loading-screen").style.display = "none";
-        document.getElementById("playing-screen").style.display =
-          "inline-block";
+        document.getElementById("playing-screen").style.display = "inline-block";
       });
 
       socket.on("draw-card", (player1, drawCard) => {
+        //player1:  boolean, whether the player that drew the card is player 1
+        //drawCard: String,  cardID of the card that was randomly selected to be added to the deck
         let playerSide;
         let newCardPath;
         let samePlayer = isPlayer1 === player1;
         let cardId = drawCard;
         if (isViewer) {
+          //samePlayer is set to true to ensure that viewer card list contains all cards
           newCardPath = imageApiPath + drawCard + ".jpg";
-          playerSide = document.getElementById(
-            (player1 ? "player1" : "player2") + "-play-side"
-          );
-          samePlayer = true;
+          playerSide  = document.getElementById((player1 ? "player1" : "player2") + "-play-side");
+          samePlayer  = true;
         } else if (isPlayer1 === player1) {
           //player that drew a card
+          //player sets their own buttons to be hidden, no need to do so here
           newCardPath = imageApiPath + drawCard + ".jpg";
-          playerSide = document.getElementById(
-            (isPlayer1 ? "player1" : "player2") + "-play-side"
-          );
+          playerSide  = document.getElementById((isPlayer1 ? "player1" : "player2") + "-play-side");
         } else {
           //not the player that drew a card
           newCardPath = "/public/images/back.png";
           cardId = "-1";
-          playerSide = document.getElementById(
-            (isPlayer1 ? "player2" : "player1") + "-play-side"
-          );
-          myDrawButton.style.display = "flex";
+          playerSide = document.getElementById((isPlayer1 ? "player2" : "player1") + "-play-side");
+          myDrawButton.style.display   = "flex";
           myRerollButton.style.display = "flex";
         }
         setDrawnCard(playerSide, newCardPath, samePlayer, cardId);

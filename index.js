@@ -9,18 +9,22 @@ const fs = require("fs");
 app.use(express.static(__dirname));
 
 let players = [];
+
 let cardListFiles = fs.readdirSync("./public/cardLists/");
 let cardListNames = cardListFiles.map((x) => {
   return x.replace(".txt", "");
 });
+
 let banListFiles = fs.readdirSync("./public/banLists/");
 let banListNames = banListFiles.map((x) => {
   return x.replace(".json", "");
 });
+
 let setListFiles = fs.readdirSync("./public/setLists/");
 let setListNames = setListFiles.map((x) => {
   return x.replace(".json", "");
 });
+
 let cardIds;
 let banList;
 let setList;
@@ -62,13 +66,14 @@ io.on("connection", (socket) => {
   });
 
   socket.on("start-game", (cardListName, banListName, setListName) => {
-    let idFile = fs.readFileSync(
-      "./public/cardLists/" + cardListName + ".txt",
-      "utf-8"
-    );
+    //all names are the values of the dropdowns chosen by player 1
+    //they correspond to the files stored on the server
+    let idFile = fs.readFileSync("./public/cardLists/" + cardListName + ".txt","utf-8");
     cardIds = idFile.split("\n");
     let banFile = fs.readFileSync("./public/banLists/" + banListName + ".json");
     banList = JSON.parse(banFile);
+    //set the number of cards left for each player, default is 3, unless the banlist mentions the card
+    //then it's set to the banlist value
     for (let i = 0; i < cardIds.length; i++) {
       let id = cardIds[i];
       playerCardsLeft.player1[id] = banList[id] ? banList[id] : 3;
