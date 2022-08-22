@@ -3,8 +3,10 @@ Targets:
     -opponents last card
     -your last (n) cards
     -opponent's last (n) cards
-    -your opponent's last ability
+    -opponent's last ability
     -your last ability
+    -your reroll count
+    -opponent's reroll count
 
 Costs:
     -Skip next turn? (not really a cost)

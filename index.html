@@ -5,89 +5,28 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/public/css/style.css" />
-    <script src="/cardFunctions.js"></script>
   </head>
   <body>
     <div id="loading-screen">
       <div id="player1-side" class="side1">
         <p style="display: inline-block">Player One:</p>
         <p id="player1-connection" style="display: inline-block">NOT READY</p>
-        <button
-          id="player1-ready-button"
-          class="ready-button"
-          style="display: none"
-        >
-          NOT READY
-        </button>
         <button id="start-game-button" style="display: none">START GAME</button>
-        <label for="card-list-select" id="card-list-label" style="display: none"
-          >Card List:</label
-        >
-        <select
-          name="card-list-select"
-          id="card-list-select"
-          style="display: none"
-        ></select>
-        <label for="ban-list-select" id="ban-list-label" style="display: none"
-          >Ban List:</label
-        >
-        <select
-          name="ban-list-select"
-          id="ban-list-select"
-          style="display: none"
-        ></select>
-        <label for="set-list-select" id="set-list-label" style="display: none"
-          >Set List:</label
-        >
-        <select
-          name="set-list-select"
-          id="set-list-select"
-          style="display: none"
-        ></select>
       </div>
       <div id="player2-side" class="side2">
         <p style="display: inline-block">Player Two:</p>
         <p id="player2-connection" style="display: inline-block">NOT READY</p>
-        <button
-          id="player2-ready-button"
-          class="ready-button"
-          style="display: none"
-        >
-          NOT READY
-        </button>
       </div>
     </div>
     <div id="playing-screen" style="display: none">
       <div id="player1-play-side" class="side1">
-        <button
-          id="player1-draw-card"
-          class="draw-card-button"
-          style="display: none"
-        >
-          Draw Card
-        </button>
-        <button
-          id="player1-reroll-card"
-          class="reroll-card-button"
-          style="display: none"
-        ></button>
+
       </div>
       <div id="card-and-powerups">
         <img src="/public/images/back.png" id="middle-card" />
       </div>
       <div id="player2-play-side" class="side2">
-        <button
-          id="player2-draw-card"
-          class="draw-card-button"
-          style="display: none"
-        >
-          Draw Card
-        </button>
-        <button
-          id="player2-reroll-card"
-          class="reroll-card-button"
-          style="display: none"
-        ></button>
+ 
       </div>
     </div>
     <script src="/socket.io/socket.io.js"></script>
@@ -118,6 +57,82 @@
         dropDowns[listNames[i]] = document.getElementById(
           listNames[i] + "-list-select"
         );
+      }
+
+      function makeMyComponents(player){
+        //player: String, "player1" or "player2"
+        //this is used to generate the buttons/textboxs/dropdowns for each player
+        //ended up changing to js-generated HTML components due to the repetitive HTML
+        //any change being made to a component required changing it in 2+ places, here it can be one place
+        //this strategy won't be best for components that aren't symmetrical, but that's currently no componenets
+
+        let myReadySide = document.getElementById(player + "-side");
+
+        myReadyButton               = document.createElement("button");
+        myReadyButton.id            = player + "-ready-button";
+        myReadyButton.className     = "ready-button";
+        myReadyButton.style.display = "block";
+        myReadyButton.innerHTML     = "NOT READY";
+        myReadyButton.addEventListener("click", () => {
+          readyButtonClicked(player);
+        });
+        
+        myReadySide.children[1].insertAdjacentElement("afterEnd", myReadyButton);
+        
+        if (player === "player1"){
+          for (let i = 0; i < listNames.length; i++) {
+            let listName        = listNames[i]; //card, ban, set
+            let capitalListName = listName.charAt(0).toUpperCase() + listName.slice(1);
+
+            let listLabel = document.createElement("label");
+
+            listLabel.htmlFor       = listName + "-list-select";
+            listLabel.id            = listName + "-list-label";
+            listLabel.style.display = "flex";
+            listLabel.innerHTML     = capitalListName + " List";
+
+            let list = document.createElement("select");
+
+            list.name          = listName + "-list-select";
+            list.id            = listName + "-list-select";
+            list.style.display = "flex";
+
+            myReadySide.appendChild(listLabel);
+            myReadySide.appendChild(list);
+            dropDowns[listName] = list;
+          }
+          socket.emit("getLists");
+        }
+
+        let myPlaySide = document.getElementById(player + "-play-side");
+
+        myDrawButton               = document.createElement("button");
+        myDrawButton.id            = player + "-draw-card";
+        myDrawButton.className     = "draw-card-button";
+        myDrawButton.style.display = "none";
+        myDrawButton.innerHTML     = "Draw Card";
+        myDrawButton.addEventListener("click", () => {
+          let lastCard = cards.length > 0 ? cards[cards.length - 1] : null;
+          socket.emit("draw-card", isPlayer1, lastCard);
+          myDrawButton.style.display   = "none";
+          myRerollButton.style.display = "none";
+        });
+
+        myRerollButton               = document.createElement("button");
+        myRerollButton.id            = player + "-reroll-button";
+        myRerollButton.className     = "reroll-card-button";
+        myRerollButton.style.display = "none";
+        myRerollButton.innerHTML     = "Re-Roll (" + numRerolls + ")";
+        myRerollButton.addEventListener("click", () => {
+          //number of rerolls left is checked here to avoid any issues server side, since it can't readily check, it'd have to be told
+          //numRerolls is decremented when socket recieves the reroll message
+          if (numRerolls > 0) {
+            socket.emit("reroll", isPlayer1, cards[cards.length - 1].alt);
+          }
+        });
+
+        myPlaySide.appendChild(myDrawButton);
+        myPlaySide.appendChild(myRerollButton);
       }
 
       function checkIfBothReady() {
@@ -164,40 +179,6 @@
         playerSide.appendChild(newCard);
       }
 
-      function setMyButtons(player) {
-        //player: String, "player1" or "player2"
-        myReadyButton               = document.getElementById(player + "-ready-button");
-        myReadyButton.style.display = "block";
-        myReadyButton.addEventListener("click", () => {
-          readyButtonClicked(player);
-        });
-
-        myDrawButton = document.getElementById(player + "-draw-card");
-        myDrawButton.addEventListener("click", () => {
-          socket.emit("draw-card", isPlayer1);
-          myDrawButton.style.display = "none";
-          myRerollButton.style.display = "none";
-        });
-
-        myRerollButton = document.getElementById(player + "-reroll-card");
-        myRerollButton.addEventListener("click", () => {
-          //number of rerolls left is checked here to avoid any issues server side, since it can't readily check, it'd have to be told
-          //numRerolls is decremented when socket recieves the reroll message
-          if (numRerolls > 0) {
-            socket.emit("reroll", isPlayer1, cards[cards.length - 1].alt);
-          }
-        });
-        myRerollButton.innerHTML = "Re-Roll (" + numRerolls + ")";
-        //only player 1 has the dropdown optoins, so if player 1 is setting up their buttons, make the dropdowns visible
-        if (player === "player1") {
-          for (let i = 0; i < listNames.length; i++) {
-            dropDowns[listNames[i]].style.display = "flex";
-            document.getElementById(listNames[i] + "-list-label").style.display = "flex";
-          }
-          socket.emit("getLists");
-        }
-      }
-
       startButton.addEventListener("click", () => {
         socket.emit("start-game", dropDowns.card.value, dropDowns.ban.value, dropDowns.set.value);
         myDrawButton.style.display   = "flex";
@@ -211,7 +192,7 @@
         //only player receiving this message is player 1, since the trigger to send it is 1 person connected
         //no need to check for anything to run this
         isPlayer1 = true;
-        setMyButtons("player1");
+        makeMyComponents("player1");
       });
 
       socket.on("player2", (id) => {
@@ -220,7 +201,7 @@
         //viewer won't receieve this, message is sent out when 2 people are connected
         isPlayer2 = socket.id === id;
         if (isPlayer2) {
-          setMyButtons("player2");
+          makeMyComponents("player2");
         } else {
           socket.emit("ready-change", "player1", myReadyButton.innerHTML);
         }
@@ -267,7 +248,8 @@
             newEntry.value     = list[j];
             newEntry.innerHTML = list[j];
 
-            dropDowns[listName].appendChild(newEntry);
+            let dropDown = document.getElementById(listName + "-list-select");
+            dropDown.appendChild(newEntry);
           }
         }
       });
