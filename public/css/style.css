@@ -77,7 +77,7 @@ width: 35vw;
   background-color: gray;
   border-radius: 10px;
   width: 50%;
-  height: 4vw;
+  height: 6vh;
   left: 0;
   margin: 0 auto;
   position: absolute;
@@ -88,8 +88,24 @@ width: 35vw;
   background-color: gray;
   border-radius: 10px;
   width: 50%;
-  height: 4vw;
+  height: 6vh;
   left: 50%;
   position: absolute;
   bottom: 0;
+}
+
+.card-container{
+  width: 35vw;
+  text-align: center;
+  height: 94vh;
+}
+
+#player1-card-container{
+  left: 0;
+  background-color: aquamarine;
+}
+
+#player2-card-container{
+  left: 65vw;
+  background-color: brown;
 }

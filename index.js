@@ -10,6 +10,9 @@ app.use(express.static(__dirname));
 
 let players = [];
 
+let cardData = fs.readFileSync("./public/cards/cardData.json");
+cardData = JSON.parse(cardData);
+
 let cardListFiles = fs.readdirSync("./public/cardLists/");
 let cardListNames = cardListFiles.map((x) => {
   return x.replace(".txt", "");
@@ -35,20 +38,52 @@ let cardIds;
 let banList;
 let setList;
 
-let playerCardsLeft = {
-  player1: {},
-  player2: {},
-};
+let playerDataPrototype = {
+  setup: () => {
+    return {  
+      name: "",
+      id: "",
+      cardsLeft: {},
+      cards: [],
+      rerolls: 5,
+      turnsBeforeRerollGained: 5,
+      rerollsPerGain: 2,
+      turnsBeforeUseReroll: 0,
+      turnsBeforeUseAbility: 0,
+      nextCardGained: null,
+      spellsLeft: 0,
+      trapsLeft: 0,
+      monstersLeft: 0
+    }
+  }
+}
 
-console.log(playerCardsLeft.player3);
+let playerData = {
+  player1: {},
+  player2: {}
+}
+
+playerData.player1 = playerDataPrototype.setup();
+playerData.player2 = playerDataPrototype.setup();
+
+function checkIfCardTypeValid(player, cardId){
+  const data = cardData[cardId];
+
+  if (data === undefined) return false;
+
+  const cardType     = data.cardType;
+  const extraDeck    = data.extraDeck;
+  const cardTypeLeft = playerData[player][cardType + "sLeft"];
+
+  if (extraDeck) return false;
+  
+  return cardTypeLeft > 0;
+}
+
 function getRandomCard(player) {
   //player: String, "player1" or "player2", whoever is drawing the card
-  let drawCard;
-  do {
-    drawCard = cardIds[Math.floor(Math.random() * cardIds.length)];
-  } while (playerCardsLeft[player][drawCard] <= 0);
-  playerCardsLeft[player][drawCard]--;
-  return drawCard;
+  
+  return getRandomCardWeighted(player, {}, 1);
 }
 
 function getRandomCardWeighted(player, data, randomFactor){
@@ -60,14 +95,14 @@ function getRandomCardWeighted(player, data, randomFactor){
 
   //add cards from given data set if they're in the card list, and the player can add it
   for (const [id, value] of Object.entries(data)){
-    if (playerCardsLeft[player][id] > 0){ //if undefined, this is also false
+    if (playerData[player].cardsLeft[id] > 0 && checkIfCardTypeValid(player, id)){ //if undefined, this is also false
       weights[id] = value;
     }
   }
 
   //add cards if they're in the card list, not in the current weight object, and player can still add it
   for (const id of cardIds){
-    if (weights[id] === undefined && playerCardsLeft[player][id] > 0){ //if undefined, this is also false
+    if (weights[id] === undefined && playerData[player].cardsLeft[id] > 0 && checkIfCardTypeValid(player, id)){ //if undefined, this is also false
       weights[id] = 1;
     }
   }
@@ -95,12 +130,17 @@ function getRandomCardWeighted(player, data, randomFactor){
     countValue += value;
     lastId = id;
     if (randomValue < countValue){
-      playerCardsLeft[player][id] = playerCardsLeft[player][id] - 1;
+      playerData[player].cardsLeft[id] = playerData[player].cardsLeft[id] - 1;
+      const data = cardData[id];
+      const cardType = data.cardType;
+      playerData[player][cardType + "sLeft"] = playerData[player][cardType + "sLeft"] - 1;
       return id;
     }
   }
-
-  playerCardsLeft[player][lastId] = playerCardsLeft[player][lastId] - 1;
+  const fallBackData = cardData[lastId];
+  const cardType = fallBackData.cardType;
+  playerData[player][cardType + "sLeft"] = playerData[player][cardType + "sLeft"] - 1;
+  playerData[player].cardsLeft[lastId] = playerData[player].cardsLeft[lastId] - 1;
   return lastId;
 
 }
@@ -149,7 +189,20 @@ io.on("connection", (socket) => {
     io.emit("ready-change", player, readyText);
   });
 
-  socket.on("start-game", (cardListName, banListName, setListName) => {
+  socket.on("start-game", (data) => {
+    const cardListName = data["card-dropdown"];
+    const banListName  = data["ban-dropdown"];
+    const setListName  = data["set-dropdown"];
+
+    //should refactor this later to be expandable a lot more easily
+    playerData.player1.spellsLeft   = data["spells-textbox"];
+    playerData.player1.trapsLeft    = data["traps-textbox"];
+    playerData.player1.monstersLeft = data["monsters-textbox"];
+
+    playerData.player2.spellsLeft   = data["spells-textbox"];
+    playerData.player2.trapsLeft    = data["traps-textbox"];
+    playerData.player2.monstersLeft = data["monsters-textbox"];
+
     //all names are the values of the dropdowns chosen by player 1
     //they correspond to the files stored on the server
     let idFile = fs.readFileSync("./public/cardLists/" + cardListName + ".txt","utf-8");
@@ -160,8 +213,8 @@ io.on("connection", (socket) => {
     //then it's set to the banlist value
     for (let i = 0; i < cardIds.length; i++) {
       let id = cardIds[i];
-      playerCardsLeft.player1[id] = banList[id] ? banList[id] : 3;
-      playerCardsLeft.player2[id] = banList[id] ? banList[id] : 3;
+      playerData.player1.cardsLeft[id] = banList[id] ? banList[id] : 3;
+      playerData.player2.cardsLeft[id] = banList[id] ? banList[id] : 3;
     }
     io.emit("start-game");
   });
@@ -169,14 +222,25 @@ io.on("connection", (socket) => {
   socket.on("draw-card", (isPlayer1, lastCard) => {
     let player = isPlayer1 ? "player1" : "player2";
     let drawCard = getRandomCardWeightedByLastCard(player, lastCard, 0);
+    playerData[player]["cards"].push(drawCard);
     io.emit("draw-card", isPlayer1, drawCard);
   });
 
-  socket.on("reroll", (isPlayer1, previousCardId) => {
-    let player = isPlayer1 ? "player1" : "player2";
-    playerCardsLeft[player][previousCardId]++;
-    let drawCard = getRandomCard(player);
-    io.emit("reroll", drawCard, isPlayer1);
+  socket.on("reroll", (player) => {
+    //don't reroll is player has no rerolls left, has a waiting period before rerolling, or has no cards
+    if (playerData[player].rerolls <= 0 || playerData[player].turnsBeforeUseReroll > 0 || playerData[player].cards.length == 0){
+      return;
+    }
+    
+    const playerCards    = playerData[player]["cards"];
+    const previousCardId = playerCards[playerCards.length - 1];
+    const drawCard       = getRandomCard(player);
+
+    playerData[player]["rerolls"]--;
+    playerData[player]["cardsLeft"][previousCardId]++;
+    playerCards[playerCards.length - 1] = drawCard;
+
+    io.emit("reroll", drawCard, player, playerData[player]["rerolls"]);
   });
 
   socket.on("disconnect", () => {
