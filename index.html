@@ -26,6 +26,9 @@
       </div>
       <div id="card-and-powerups">
         <img src="/public/images/back.png" id="middle-card" />
+        <div id="abilities-container">
+
+        </div>
       </div>
       <div id="player2-play-side" class="side2">
         <div id="player2-card-container" class="card-container">
@@ -49,11 +52,13 @@
       let imageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics/"
       let cardWidth    = "12.5%";
   
-      let startButton = document.getElementById("start-game-button");
+      let startButton      = document.getElementById("start-game-button");
+      let abilitiesContainer = document.getElementById("abilities-container");
 
       let myReadyButton;
       let myDrawButton;
       let myRerollButton;
+
 
       function makeMyComponents(player){
         //player: String, "player1" or "player2"
@@ -155,6 +160,67 @@
         myPlaySide.appendChild(myRerollButton);
       }
 
+      function makeToolTipText(abilityData){
+        let toolText         = abilityData.description + "<br />Me<br />";
+        const targetMe       = abilityData.targetMe;
+        const targetOpponent = abilityData.targetOpponent;
+
+        for (const trait in targetMe){
+          const value = targetMe[trait];
+          toolText += "•" +  trait + ": " + value + "<br />";
+        }
+        toolText += "<br />Opponent";
+        for (const trait in targetOpponent){
+          const value = targetOpponent[trait];
+          toolText += "<br />•" +  trait + ": " + value;
+        }
+   
+
+
+        return toolText;
+
+      }
+
+      function makeAbilityComponent(abilityName, abilityData, row, col){
+        let newAbility = document.createElement("div");
+
+        newAbility.className             = "ability-tooltip";
+        newAbility.id                    = abilityData.id + "-ability"
+        newAbility.style.backgroundColor = "orange";
+        newAbility.innerHTML             = abilityName;
+        newAbility.style.gridRow         = row + " / span 1";
+        newAbility.style.gridColumn      = col + " / span 1";
+        newAbility.addEventListener("click", () => {
+          socket.emit("ability", abilityName, isPlayer1);
+        });
+
+        let newAbilityToolTip       = document.createElement("span");
+        newAbilityToolTip.className = "ability-tooltip-text";
+        newAbilityToolTip.innerHTML = makeToolTipText(abilityData);
+      
+        console.log(newAbility);
+
+        abilitiesContainer.appendChild(newAbility);
+        newAbility.appendChild(newAbilityToolTip);
+        
+      }
+
+      function makeAbilities(abilitiesData){
+        let rowIndex    = 1;
+        let colIndex    = 1;
+        const totalRows = 2;
+        const totalCols = 5;
+
+        for (const abilityName in abilitiesData){
+          makeAbilityComponent(abilityName, abilitiesData[abilityName], rowIndex, colIndex);
+          colIndex++;
+          if (colIndex > totalCols){
+            colIndex = 1;
+            rowIndex++;
+          }
+        }
+      }
+
       function checkIfBothReady() {
         let player1 = document.getElementById("player1-connection").innerHTML;
         let player2 = document.getElementById("player2-connection").innerHTML;
@@ -218,7 +284,7 @@
 
       startButton.addEventListener("click", () => {
         let data = {};
-        
+
         for (const listName of listNames){
           data[listName + "-dropdown"] = dropDowns[listName].value;
         }
@@ -302,11 +368,13 @@
         }
       });
 
-      socket.on("start-game", () => {
+      socket.on("start-game", (abilitiesData) => {
         //player 1 takes care of making the right buttons visible when they click the start button
         //no need to do so here, just change the screen
+        makeAbilities(abilitiesData);
         document.getElementById("loading-screen").style.display = "none";
         document.getElementById("playing-screen").style.display = "inline-block";
+        
       });
 
       socket.on("draw-card", (player1, drawCard) => {
@@ -345,6 +413,17 @@
           lastCard.src = imageApiPath + newCardId + ".jpg";
           lastCard.alt = newCardId;
           myRerollButton.innerHTML = "Re-Roll (" + numRerolls + ")";
+        }
+      });
+
+      socket.on("ability", (player1, myRerolls, opponentRerolls) => {
+        if (isViewer){
+          return;
+        }
+        if (player1 === isPlayer1){
+          myRerollButton.innerHTML = "Re-Roll (" + myRerolls + ")";
+        } else {
+          myRerollButton.innerHTML = "Re-Roll (" + opponentRerolls + ")";
         }
       });
     </script>

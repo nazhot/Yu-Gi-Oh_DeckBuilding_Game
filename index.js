@@ -38,6 +38,47 @@ let cardIds;
 let banList;
 let setList;
 
+let abilities = {
+  "Three For Two" : {
+    count: () => {return 2},
+    id: "three-for-two",
+    description: "Get 2 more rerolls, but your opponent is getting 3!",
+    targetMe: {
+      rerolls: 2,
+      turnsBeforeUseAbility: 1
+    },
+    
+    targetOpponent: {
+      rerolls: 3
+    }
+  },
+
+  "Another, Please!" : {
+    count: () => {return 2},
+    id: "another-please",
+    description: "You loved the last card you got so much, why not get another one?",
+    targetMe: {
+      nextCardGained: "same",
+      rerolls: -1,
+      turnsBeforeUseAbility: 1
+    }
+  },
+
+  "They'll Have What I'm Having" : {
+    count: () => {return 2},
+    id: "theyll-have",
+    description: "You hated the last card you got so much, why not give one to your opponent?",
+    targetMe: {
+      rerolls: -1,
+      turnsBeforeUseAbility: 1,
+      turnsBeforeUseReroll: 1
+    }, 
+    targetOpponent: {
+      nextCardGained: "opponentSame"
+    }
+  }
+}
+
 let playerDataPrototype = {
   setup: () => {
     return {  
@@ -53,10 +94,13 @@ let playerDataPrototype = {
       nextCardGained: null,
       spellsLeft: 0,
       trapsLeft: 0,
-      monstersLeft: 0
+      monstersLeft: 0,
+      abilities: {}
     }
   }
 }
+
+
 
 let playerData = {
   player1: {},
@@ -65,6 +109,11 @@ let playerData = {
 
 playerData.player1 = playerDataPrototype.setup();
 playerData.player2 = playerDataPrototype.setup();
+
+for (const abilityName in abilities){
+  playerData.player1.abilities[abilityName] = abilities[abilityName];
+  playerData.player2.abilities[abilityName] = abilities[abilityName];
+}
 
 function checkIfCardTypeValid(player, cardId){
   const data = cardData[cardId];
@@ -82,7 +131,7 @@ function checkIfCardTypeValid(player, cardId){
 
 function getRandomCard(player) {
   //player: String, "player1" or "player2", whoever is drawing the card
-  
+
   return getRandomCardWeighted(player, {}, 1);
 }
 
@@ -216,13 +265,41 @@ io.on("connection", (socket) => {
       playerData.player1.cardsLeft[id] = banList[id] ? banList[id] : 3;
       playerData.player2.cardsLeft[id] = banList[id] ? banList[id] : 3;
     }
-    io.emit("start-game");
+    io.emit("start-game", playerData.player1.abilities);
   });
 
-  socket.on("draw-card", (isPlayer1, lastCard) => {
-    let player = isPlayer1 ? "player1" : "player2";
-    let drawCard = getRandomCardWeightedByLastCard(player, lastCard, 0);
-    playerData[player]["cards"].push(drawCard);
+  socket.on("draw-card", (isPlayer1) => {
+    const player       = isPlayer1 ? "player1" : "player2";
+    const data         = playerData[player];
+    const lastCard     = data.cards[data.cards.length - 1];
+    let drawCard;
+    
+    if (data.nextCardGained === "same" && data.cardsLeft[lastCard] > 0 && checkIfCardTypeValid(player, lastCard)){
+      drawCard = lastCard;
+      // data.cards.push(lastCard)
+      // io.emit("draw-card", isPlayer1, lastCard);
+      // data.nextCardGained = null;
+      // return;
+    } else if (data.nextCardGained === "opponentSame"){
+      const opponent = isPlayer1 ? "player2" : "player1";
+      const opponentData = playerData[opponent]; 
+      const opponentLastCard = opponentData.cards[opponentData.cards.length - 2];
+      if (data.cardsLeft[opponentLastCard] > 0 && checkIfCardTypeValid(player, opponentLastCard)){
+        drawCard = opponentLastCard;
+        // data.cards.push(opponentLastCard);
+        // io.emit("draw-card", isPlayer1, opponentLastCard);
+      }
+    } else {
+      drawCard = getRandomCardWeightedByLastCard(player, lastCard, 0);
+    }
+
+    data.cards.push(drawCard);
+
+    data.nextCardGained          = null;
+    data.turnsBeforeRerollGained = Math.max(--data.turnsBeforeRerollGained, 0);
+    data.turnsBeforeUseAbility   = Math.max(--data.turnsBeforeUseAbility, 0);
+    data.turnsBeforeUseReroll    = Math.max(--data.turnsBeforeUseReroll, 0);
+
     io.emit("draw-card", isPlayer1, drawCard);
   });
 
@@ -241,6 +318,43 @@ io.on("connection", (socket) => {
     playerCards[playerCards.length - 1] = drawCard;
 
     io.emit("reroll", drawCard, player, playerData[player]["rerolls"]);
+  });
+
+  socket.on("ability", (abilityName, isPlayer1) => {
+    const player       = isPlayer1 ? "player1" : "player2";
+    const myData       = playerData[player];
+
+    if (myData.turnsBeforeUseAbility > 0){
+      return;
+    }
+
+    const opponent       = isPlayer1 ? "player2" : "player1";
+    const opponentData   = playerData[opponent];
+    const ability        = myData.abilities[abilityName];
+    const targetMe       = ability.targetMe;
+    const targetOpponent = ability.targetOpponent;
+
+    for (const trait in targetMe){
+      const value = targetMe[trait];
+      if (typeof value === "number"){
+        myData[trait] += value;
+      } else {
+        myData[trait] = value;
+      }
+    }
+
+    for (const trait in targetOpponent){
+      const value = targetOpponent[trait];
+      if (typeof value === "number"){
+        opponentData[trait] += value;
+      } else {
+        opponentData[trait] = value;
+      }
+    }
+
+    console.log("My rerolls: " + myData.rerolls);
+    console.log("Opponent rerolls: " + opponentData.rerolls);
+    io.emit("ability", isPlayer1, myData.rerolls, opponentData.rerolls);
   });
 
   socket.on("disconnect", () => {

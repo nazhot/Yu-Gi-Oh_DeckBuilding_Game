@@ -46,7 +46,7 @@ width: 35vw;
     position: fixed;
     display: inline-block;
     width: 30vw;
-    height: 100vh;
+    height: 70vh;
     left: 35vw;
     top: 0;
     background-color:burlywood;
@@ -108,4 +108,47 @@ width: 35vw;
 #player2-card-container{
   left: 65vw;
   background-color: brown;
+}
+
+#abilities-container{
+  position: fixed;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 2% 2%;
+  width: 30vw;
+  height: 30vh;
+  bottom: 0;
+  left: 35vw;
+  bottom: 0;
+  background-color: forestgreen;
+}
+
+.ability-tooltip {
+  position: relative;
+  display: inline-block;
+  border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+}
+
+/* Tooltip text */
+.ability-tooltip .ability-tooltip-text {
+  visibility: hidden;
+  width: 120px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  padding: 5px 0;
+  border-radius: 6px;
+ 
+  /* Position the tooltip text - see examples below! */
+  position: absolute;
+  z-index: 1;
+  bottom: 100%;
+  left: 50%;
+  margin-left: -60px;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container */
+.ability-tooltip:hover .ability-tooltip-text {
+  visibility: visible;
 }
