@@ -8,7 +8,8 @@ const fs = require("fs");
 
 app.use(express.static(__dirname));
 
-let players = [];
+let players       = [];
+let currentPlayer = "player1";
 
 let cardData = fs.readFileSync("./public/cards/cardData.json");
 cardData = JSON.parse(cardData);
@@ -37,6 +38,10 @@ totalUsages = JSON.parse(totalUsages);
 let cardIds;
 let banList;
 let setList;
+
+let randomFactor;
+let totalCardsAllowed;
+let totalCards = 0;
 
 let abilities = {
   "Three For Two" : {
@@ -88,9 +93,10 @@ let playerDataPrototype = {
       cards: [],
       rerolls: 5,
       turnsBeforeRerollGained: 5,
+      totalTurnsBeforeRerollGained: 5,
       rerollsPerGain: 2,
-      turnsBeforeUseReroll: 0,
-      turnsBeforeUseAbility: 0,
+      turnsBeforeUseReroll: 1,
+      turnsBeforeUseAbility: 1,
       nextCardGained: null,
       spellsLeft: 0,
       trapsLeft: 0,
@@ -216,6 +222,29 @@ function getRandomCardWeightedByLastCard(player, lastCard, randomFactor){
   return getRandomCardWeighted(player, connectionsToLastCard, randomFactor);
 }
 
+function getAbilityStatus(){
+  let abilityStatus = {
+    player1: {},
+    player2: {}
+  }
+
+  for (const player in abilityStatus){
+    const abilities = playerData[player].abilities;
+    for (const ability in abilities){
+      const abilityId = abilities[ability].id;
+      let canUse = player === currentPlayer;
+      canUse     = canUse && playerData[player].turnsBeforeUseAbility <= 0;
+      canUse     = canUse && abilities[ability].count() > 0;
+      canUse     = canUse && playerData[player].rerolls + abilities[ability].targetMe.rerolls >= 0;
+
+      abilityStatus[player][abilityId] = canUse;
+
+    }
+  }
+
+  return abilityStatus;
+}
+
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/index.html");
 });
@@ -242,6 +271,7 @@ io.on("connection", (socket) => {
     const cardListName = data["card-dropdown"];
     const banListName  = data["ban-dropdown"];
     const setListName  = data["set-dropdown"];
+    randomFactor       = data["randomFactor"];
 
     //should refactor this later to be expandable a lot more easily
     playerData.player1.spellsLeft   = data["spells-textbox"];
@@ -251,6 +281,8 @@ io.on("connection", (socket) => {
     playerData.player2.spellsLeft   = data["spells-textbox"];
     playerData.player2.trapsLeft    = data["traps-textbox"];
     playerData.player2.monstersLeft = data["monsters-textbox"];
+
+    totalCardsAllowed = (playerData.player1.spellsLeft + playerData.player1.trapsLeft + playerData.player1.monstersLeft) * 2;
 
     //all names are the values of the dropdowns chosen by player 1
     //they correspond to the files stored on the server
@@ -266,9 +298,13 @@ io.on("connection", (socket) => {
       playerData.player2.cardsLeft[id] = banList[id] ? banList[id] : 3;
     }
     io.emit("start-game", playerData.player1.abilities);
+    currentPlayer = "player2";
+    io.emit("ability-update", getAbilityStatus());
+    currentPlayer = "player1";
   });
 
   socket.on("draw-card", (isPlayer1) => {
+    //drawing a card is what switches the currentPlayer
     const player       = isPlayer1 ? "player1" : "player2";
     const data         = playerData[player];
     const lastCard     = data.cards[data.cards.length - 1];
@@ -290,7 +326,7 @@ io.on("connection", (socket) => {
         // io.emit("draw-card", isPlayer1, opponentLastCard);
       }
     } else {
-      drawCard = getRandomCardWeightedByLastCard(player, lastCard, 0);
+      drawCard = getRandomCardWeightedByLastCard(player, lastCard, randomFactor);
     }
 
     data.cards.push(drawCard);
@@ -299,8 +335,22 @@ io.on("connection", (socket) => {
     data.turnsBeforeRerollGained = Math.max(--data.turnsBeforeRerollGained, 0);
     data.turnsBeforeUseAbility   = Math.max(--data.turnsBeforeUseAbility, 0);
     data.turnsBeforeUseReroll    = Math.max(--data.turnsBeforeUseReroll, 0);
+    
+    if (data.turnsBeforeRerollGained <= 0){
+      data.rerolls += data.rerollsPerGain;
+      data.turnsBeforeRerollGained = data.totalTurnsBeforeRerollGained;
+    }
 
-    io.emit("draw-card", isPlayer1, drawCard);
+    currentPlayer                = isPlayer1 ? "player2" : "player1";
+
+    totalCards++;
+    if (totalCards >= totalCardsAllowed){
+      io.emit("end-game");
+      return;
+    }
+
+    io.emit("ability-update", getAbilityStatus());
+    io.emit("draw-card", isPlayer1, drawCard, data.rerolls);
   });
 
   socket.on("reroll", (player) => {
@@ -316,7 +366,7 @@ io.on("connection", (socket) => {
     playerData[player]["rerolls"]--;
     playerData[player]["cardsLeft"][previousCardId]++;
     playerCards[playerCards.length - 1] = drawCard;
-
+    io.emit("ability-update", getAbilityStatus());
     io.emit("reroll", drawCard, player, playerData[player]["rerolls"]);
   });
 
@@ -324,7 +374,7 @@ io.on("connection", (socket) => {
     const player       = isPlayer1 ? "player1" : "player2";
     const myData       = playerData[player];
 
-    if (myData.turnsBeforeUseAbility > 0){
+    if (myData.turnsBeforeUseAbility > 0 || player != currentPlayer){
       return;
     }
 
@@ -351,10 +401,20 @@ io.on("connection", (socket) => {
         opponentData[trait] = value;
       }
     }
-
-    console.log("My rerolls: " + myData.rerolls);
-    console.log("Opponent rerolls: " + opponentData.rerolls);
+    io.emit("ability-update", getAbilityStatus());
     io.emit("ability", isPlayer1, myData.rerolls, opponentData.rerolls);
+  });
+
+  socket.on("download", (isPlayer1) =>{
+    const player = isPlayer1 ? "player1" : "player2";
+    const cards  = playerData[player].cards;
+    let ydkFile = "#main";
+    for (const card of cards){
+      ydkFile += "\n" + card;
+    }
+    ydkFile += "\n!extra\n!side";
+
+    io.emit("download", isPlayer1, ydkFile);
   });
 
   socket.on("disconnect", () => {

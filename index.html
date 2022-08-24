@@ -36,6 +36,9 @@
         </div>
       </div>
     </div>
+    <div id="end-screen" style="display:none;">
+      <button id="download-ydk">DOWNLOAD</button>
+    </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
       let socket           = io();
@@ -52,8 +55,9 @@
       let imageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics/"
       let cardWidth    = "12.5%";
   
-      let startButton      = document.getElementById("start-game-button");
+      let startButton        = document.getElementById("start-game-button");
       let abilitiesContainer = document.getElementById("abilities-container");
+      let downloadButton     = document.getElementById("download-ydk");
 
       let myReadyButton;
       let myDrawButton;
@@ -129,6 +133,26 @@
             myReadySide.appendChild(cardTypeTextBox);
           }
 
+          let randomValueLabel    = document.createElement("label");
+          let randomValueDropdown = document.createElement("select");
+          
+          randomValueLabel.htmlFor       = "randomFactor";
+          randomValueLabel.style.display = "flex";
+          randomValueLabel.innerHTML     = "Random Factor";
+
+          randomValueDropdown.style.display = "flex";
+          randomValueDropdown.id            = "randomFactor";
+
+          for (let i = 0; i <= 100; i += 25){
+            let randomValue = document.createElement("option");
+            randomValue.innerHTML = i + "%";
+            randomValue.value = i / 100.0;
+            randomValueDropdown.appendChild(randomValue);
+          }
+          
+          myReadySide.appendChild(randomValueLabel);
+          myReadySide.appendChild(randomValueDropdown);
+
           socket.emit("getLists");
         }
 
@@ -149,7 +173,7 @@
         myRerollButton.id            = player + "-reroll-button";
         myRerollButton.className     = "reroll-card-button";
         myRerollButton.style.display = "none";
-        myRerollButton.innerHTML     = "Re-Roll (" + numRerolls + ")";
+        setRerollText(numRerolls);
         myRerollButton.addEventListener("click", () => {
           //number of rerolls left is checked here to avoid any issues server side, since it can't readily check, it'd have to be told
           //numRerolls is decremented when socket recieves the reroll message
@@ -195,6 +219,7 @@
         });
 
         let newAbilityToolTip       = document.createElement("span");
+        newAbilityToolTip.id        = abilityData.id + "-ability-tooltip-text"
         newAbilityToolTip.className = "ability-tooltip-text";
         newAbilityToolTip.innerHTML = makeToolTipText(abilityData);
       
@@ -271,7 +296,7 @@
         for (const cardType of cardTypes){
           let textBox = document.getElementById(cardType + "-count");
           let value = textBox.value;
-          totalCount += value;
+          totalCount += Math.floor(value);
           if (isNaN(totalCount)){
             textBox.style.backgroundColor = "red";
             return -1;
@@ -279,6 +304,23 @@
           textBox.style.backgroundColor = "white";
         }
         return totalCount;
+      }
+
+      function setRerollText(rerolls){
+        myRerollButton.innerHTML = "Re-Roll (" + rerolls + ")";
+      }
+
+      function download(filename, text) {
+        var element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+        element.setAttribute('download', filename);
+
+        element.style.display = 'none';
+        document.body.appendChild(element);
+
+        element.click();
+
+        document.body.removeChild(element);
       }
 
 
@@ -292,14 +334,18 @@
         for (const cardType of cardTypes){
           let value = cardTypeElements[cardType].value;
           value = value === "" ? 0 : value;
-          data[cardType + "-textbox"] = value;
+          data[cardType + "-textbox"] = Math.floor(value);
         }
+
+        data.randomFactor = document.getElementById("randomFactor").value;
         socket.emit("start-game", data);
         myDrawButton.style.display   = "flex";
         myRerollButton.style.display = "flex";
       });
 
-
+      downloadButton.addEventListener("click", () => {
+        socket.emit("download", isPlayer1);
+      });
 
 
       socket.on("player1", (id) => {
@@ -377,7 +423,7 @@
         
       });
 
-      socket.on("draw-card", (player1, drawCard) => {
+      socket.on("draw-card", (player1, drawCard, rerolls) => {
         //player1:  boolean, whether the player that drew the card is player 1
         //drawCard: String,  cardID of the card that was randomly selected to be added to the deck
         let playerSide;
@@ -403,6 +449,7 @@
           myRerollButton.style.display = "flex";
         }
         setDrawnCard(playerSide, newCardPath, samePlayer, cardId);
+        setRerollText(rerolls);
       });
 
       socket.on("reroll", (newCardId, player, numRerolls) => {
@@ -412,7 +459,22 @@
           let lastCard = playerSide.lastChild;
           lastCard.src = imageApiPath + newCardId + ".jpg";
           lastCard.alt = newCardId;
-          myRerollButton.innerHTML = "Re-Roll (" + numRerolls + ")";
+          setRerollText(numRerolls);
+        }
+      });
+
+      socket.on("ability-update", (abilityStatus) => {
+        if (isViewer){
+          return;
+        }
+        const player    = isPlayer1 ? "player1" : "player2";
+        const abilities = abilityStatus[player];
+        
+        for (const abilityId in abilities){
+          const canUse     = abilities[abilityId];
+          const abilityDiv = document.getElementById(abilityId + "-ability");
+
+          abilityDiv.style.opacity = canUse ? 1.0 : 0.2;
         }
       });
 
@@ -421,9 +483,29 @@
           return;
         }
         if (player1 === isPlayer1){
-          myRerollButton.innerHTML = "Re-Roll (" + myRerolls + ")";
+          setRerollText(myRerolls);
         } else {
-          myRerollButton.innerHTML = "Re-Roll (" + opponentRerolls + ")";
+          setRerollText(opponentRerolls);
+        }
+      });
+
+      socket.on("end-game", () => {
+        if (isViewer){
+          return;
+        }
+        const playingScreen = document.getElementById("playing-screen");
+        const endScreen     = document.getElementById("end-screen");
+
+        playingScreen.style.display = "none";
+        endScreen.style.display     = "flex";
+      });
+
+      socket.on("download", (player1, ydkFile) => {
+        if (isViewer){
+          return;
+        }
+        if (player1 === isPlayer1){
+          download("NoahDeck.ydk", ydkFile);
         }
       });
     </script>
