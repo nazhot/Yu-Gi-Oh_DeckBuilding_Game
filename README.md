@@ -4,7 +4,23 @@ A new take on Yu-Gi-Oh deck building, adding the element of randomness, some ski
 ## Overview
 A tool for adding another layer on top of the Yu-Gi-Oh card game! 2 players can go back and forth, getting random cards to compile their decks, with some interaction between opponents. This tool is meant to keep Yu-Gi-Oh fun by: taking a step back from the competitive side, generating decks more akin to playground-style duels, and turning deck building into an interactive game.
 ## Current Version
+v0.0.2
+- Reroll functionality added (last card drawn, only)
+- Basic abilities have been added
+  - Gain 2 rerolls, opponent gains 3
+  - Gain the same card you last drew
+  - Opponent gains the same card you last drew
+- Able to select how many of trap/spell/monster cards will be going in both decks
+  - Currently just a player 1 setting that is mirrored for both players
+- Able to select amount of randomness when drawing new cards
+  - Web scraped https://www.db.yugioh-card.com/yugiohdb/deck_search.action?request_locale=en for decks, and the cards that make them up
+  - Using these decks, made a connections matrix that shows how often card X is in the same deck as card Y
+  - Also made a matrix for how many times cards appeared in decks, total
+  - Values in the connections matrix are used as weights for a random draw, and the randomness factor has the weights go from all equal (random factor of 1) to fully based on values (random factor of 0)
+- At the end of the game, both players are able to download their ydk file to be used in a duel online
 
+  
+## Previous Versions
 v0.0.1
 - Ugly as can be
 - Two users can connect to the server, and ready/unready up
@@ -15,9 +31,6 @@ v0.0.1
   - Other player only sees that you drew a card, not what card it was
  - Viewers are allowed
   - See both players full decks, prone to cheating if you are a dishonest cotton headed mini muffin
-  
-## Previous Versions
-N/A
 
 ## Hopeful Features
 - Less ugly
@@ -52,6 +65,6 @@ npm install
 ```
 Run the following script in your command line:
 ```
-node index.js
+npm start
 ```
 Once the server is running, go to http://localhost:3000 in your browser.
