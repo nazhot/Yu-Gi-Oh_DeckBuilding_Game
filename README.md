@@ -4,6 +4,14 @@ A new take on Yu-Gi-Oh deck building, adding the element of randomness, some ski
 ## Overview
 A tool for adding another layer on top of the Yu-Gi-Oh card game! 2 players can go back and forth, getting random cards to compile their decks, with some interaction between opponents. This tool is meant to keep Yu-Gi-Oh fun by: taking a step back from the competitive side, generating decks more akin to playground-style duels, and turning deck building into an interactive game.
 ## Current Version
+v0.0.3
+- Added ability to host multiple games at once
+  - Home screen is now the option to make or join a game
+- Program resets all values/data when new game is created, which was the issue with v0.0.2
+- Users can now put in a name to be displayed to them/their opponent
+
+  
+## Previous Versions
 v0.0.2
 - Reroll functionality added (last card drawn, only)
 - Basic abilities have been added
@@ -19,8 +27,7 @@ v0.0.2
   - Values in the connections matrix are used as weights for a random draw, and the randomness factor has the weights go from all equal (random factor of 1) to fully based on values (random factor of 0)
 - At the end of the game, both players are able to download their ydk file to be used in a duel online
 
-  
-## Previous Versions
+
 v0.0.1
 - Ugly as can be
 - Two users can connect to the server, and ready/unready up
@@ -34,8 +41,7 @@ v0.0.1
 
 ## Hopeful Features
 - Less ugly
-- When connecting, user can input a username to go by
-  - Have this information stored for repeated connecting
+- Have username information stored for repeated connecting
 - Global settings for player 1 to set
   - Set List (cards that are auto-given to both players before game starts)
 - Ability for players to upload their own card/ban/set list for use

@@ -7,14 +7,22 @@
     <link rel="stylesheet" href="/public/css/style.css" />
   </head>
   <body>
-    <div id="loading-screen">
+    <div id="room-screen">
+      <form id="room-form" action="">
+        <input id="join-room-input" autocomplete="off" /><button>JOIN GAME</button>
+      </form>
+      <button id="make-room" onclick="makeRoom()">MAKE GAME</button>
+      <p> Rooms: </p>
+      <ul id="rooms"></ul>
+    </div>
+    <div id="loading-screen" style="display:none;">
       <div id="player1-side" class="side1">
-        <p style="display: inline-block">Player One:</p>
+        <p style="display: inline-block" id="player1-username"></p>
         <p id="player1-connection" style="display: inline-block">NOT READY</p>
         <button id="start-game-button" style="display: none">START GAME</button>
       </div>
       <div id="player2-side" class="side2">
-        <p style="display: inline-block">Player Two:</p>
+        <p style="display: inline-block" id="player2-username"></p>
         <p id="player2-connection" style="display: inline-block">NOT READY</p>
       </div>
     </div>
@@ -42,15 +50,16 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
       let socket           = io();
-      let isPlayer1        = false;
-      let isPlayer2        = false;
-      let isViewer         = false;
+      let roomNameLength   = 4;
       let bothReady        = false;
       let numRerolls       = 5;
       let listNames        = ["card", "ban", "set"]; //names used to get all dropdown information
       let cardTypes        = ["spells", "traps", "monsters"];
       let dropDowns        = {}; //holder for the three drop down elements, since they're so similar in name
       let cardTypeElements = {};
+      let myRole           = "";
+      let myRoomName       = "";
+      let myUsername       = "";
 
       let imageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics/"
       let cardWidth    = "12.5%";
@@ -58,11 +67,38 @@
       let startButton        = document.getElementById("start-game-button");
       let abilitiesContainer = document.getElementById("abilities-container");
       let downloadButton     = document.getElementById("download-ydk");
+      let joinRoomForm       = document.getElementById("room-form");
 
       let myReadyButton;
       let myDrawButton;
       let myRerollButton;
 
+      function makeRoom(){
+        const roomHolder = document.getElementById("rooms");
+        const elementList   = roomHolder.getElementsByTagName("li");
+        let   roomList      = [];
+        for (let i = 0; i < elementList.length; i++){
+          roomList.push(elementList[i].innerHTML);
+        }
+        for (let i = 0; i < socket.id.length - roomNameLength; i += roomNameLength){
+          const idSlice = socket.id.slice(i, i + roomNameLength);
+
+          if (roomList.includes(idSlice)){
+            continue;
+          }
+          let username = prompt("Please enter your name");
+          if (username === null){
+            return;
+          }
+          username = username ? username : "Lame-o";
+          myUsername = username;
+          document.getElementById("player1-username").innerHTML = myUsername + ":";
+
+          socket.emit("make-room", idSlice, username);
+          return;
+          
+        }
+      }
 
       function makeMyComponents(player){
         //player: String, "player1" or "player2"
@@ -70,6 +106,10 @@
         //ended up changing to js-generated HTML components due to the repetitive HTML
         //any change being made to a component required changing it in 2+ places, here it can be one place
         //this strategy won't be best for components that aren't symmetrical, but that's currently no componenets
+
+        if (player === "viewer"){
+          return;
+        }
 
         let myReadySide = document.getElementById(player + "-side");
 
@@ -81,11 +121,7 @@
         myReadyButton.addEventListener("click", () => {
           readyButtonClicked(player);
         });
-
- 
-
-
-        
+    
         myReadySide.children[1].insertAdjacentElement("afterEnd", myReadyButton);
         
         if (player === "player1"){
@@ -108,7 +144,6 @@
             myReadySide.appendChild(list);
             dropDowns[listName] = list;
           }
-
 
           for (const cardType of cardTypes){
             const capitalCardType = cardType.charAt(0).toUpperCase() + cardType.slice(1);
@@ -153,7 +188,7 @@
           myReadySide.appendChild(randomValueLabel);
           myReadySide.appendChild(randomValueDropdown);
 
-          socket.emit("getLists");
+          socket.emit("getLists", myRoomName);
         }
 
         let myPlaySide = document.getElementById(player + "-play-side");
@@ -164,7 +199,7 @@
         myDrawButton.style.display = "none";
         myDrawButton.innerHTML     = "Draw Card";
         myDrawButton.addEventListener("click", () => {
-          socket.emit("draw-card", isPlayer1);
+          socket.emit("draw-card", myRoomName, myRole);
           myDrawButton.style.display   = "none";
           myRerollButton.style.display = "none";
         });
@@ -177,11 +212,12 @@
         myRerollButton.addEventListener("click", () => {
           //number of rerolls left is checked here to avoid any issues server side, since it can't readily check, it'd have to be told
           //numRerolls is decremented when socket recieves the reroll message
-          socket.emit("reroll", player);
+          socket.emit("reroll", myRoomName, player);
         });
 
         myPlaySide.appendChild(myDrawButton);
         myPlaySide.appendChild(myRerollButton);
+
       }
 
       function makeToolTipText(abilityData){
@@ -215,15 +251,13 @@
         newAbility.style.gridRow         = row + " / span 1";
         newAbility.style.gridColumn      = col + " / span 1";
         newAbility.addEventListener("click", () => {
-          socket.emit("ability", abilityName, isPlayer1);
+          socket.emit("ability", myRoomName, abilityName, myRole);
         });
 
         let newAbilityToolTip       = document.createElement("span");
         newAbilityToolTip.id        = abilityData.id + "-ability-tooltip-text"
         newAbilityToolTip.className = "ability-tooltip-text";
         newAbilityToolTip.innerHTML = makeToolTipText(abilityData);
-      
-        console.log(newAbility);
 
         abilitiesContainer.appendChild(newAbility);
         newAbility.appendChild(newAbilityToolTip);
@@ -262,7 +296,7 @@
           myReadyButton.style.backgroundColor = "darkgreen";
         }
         //send out message so that other player/viewer can see your current status
-        socket.emit("ready-change", player, myReadyButton.innerHTML);
+        socket.emit("ready-change", myRoomName, player, myReadyButton.innerHTML);
       }
 
       function setDrawnCard(playerSide, drawCard, samePlayer, cardId) {
@@ -306,8 +340,22 @@
         return totalCount;
       }
 
-      function setRerollText(rerolls){
-        myRerollButton.innerHTML = "Re-Roll (" + rerolls + ")";
+      function setRerollText(playerRerolls){
+        myRerollButton.innerHTML = "Re-Roll (" + playerRerolls + ")";
+      }
+
+      function setAbilityStatus(abilityStatus){
+        if (myRole === "viewer"){
+          return;
+        }
+        const abilities = abilityStatus[myRole];
+        
+        for (const abilityId in abilities){
+          const canUse     = abilities[abilityId];
+          const abilityDiv = document.getElementById(abilityId + "-ability");
+
+          abilityDiv.style.opacity = canUse ? 1.0 : 0.2;
+        }
       }
 
       function download(filename, text) {
@@ -338,41 +386,78 @@
         }
 
         data.randomFactor = document.getElementById("randomFactor").value;
-        socket.emit("start-game", data);
+        socket.emit("start-game", myRoomName, data);
         myDrawButton.style.display   = "flex";
         myRerollButton.style.display = "flex";
       });
 
       downloadButton.addEventListener("click", () => {
-        socket.emit("download", isPlayer1);
+        socket.emit("download", myRoomName, myRole);
       });
 
-
-      socket.on("player1", (id) => {
-        //only player receiving this message is player 1, since the trigger to send it is 1 person connected
-        //no need to check for anything to run this
-        isPlayer1 = true;
-        makeMyComponents("player1");
+      joinRoomForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const roomInput = document.getElementById("join-room-input");
+        if (roomInput.value){
+          const roomList = document.getElementById("rooms").getElementsByTagName("li");
+          for (let i = 0; i < roomList.length; i++){
+            const room = roomList[i].innerHTML;
+            if (roomInput.value === room){
+              let username = prompt("Please enter your name");
+              username = username ? username : "Lame-o";
+              if (username === null){
+                return;
+              }
+              socket.emit("join-room", room, username);
+              return;
+            }
+          }
+          alert("No room found with name " + roomInput.value);
+        }
+        
+ 
       });
 
-      socket.on("player2", (id) => {
-        //if message is received by player 2, set their buttons
-        //if message is received by player 1, let player 2 know your ready status 
-        //viewer won't receieve this, message is sent out when 2 people are connected
-        isPlayer2 = socket.id === id;
-        if (isPlayer2) {
-          makeMyComponents("player2");
-        } else {
-          socket.emit("ready-change", "player1", myReadyButton.innerHTML);
+      socket.on("rooms", (roomList) => {
+        const roomsParent = document.getElementById("rooms");
+        while (roomsParent.firstChild){
+          roomsParent.removeChild(roomsParent.firstChild);
+        }
+        for (const roomName of roomList){
+          const room = document.createElement("li");
+
+          room.innerHTML = roomName;
+
+          roomsParent.appendChild(room);
+
         }
       });
 
-      socket.on("viewer", (id) => {
-        isViewer = id === socket.id;
-        if (isPlayer1 || isPlayer2) {
-          //sends current "READY" status of the players to the viewer
-          socket.emit("ready-change", isPlayer1 ? "player1" : "player2", myReadyButton.innerHTML);
+      socket.on("join-room", (playerRole, room, player1Name, player2Name) => {
+        document.getElementById("player1-username").innerHTML = player1Name + ":";
+        if (player2Name != ""){
+          document.getElementById("player2-username").innerHTML = player2Name + ":";
         }
+
+        if (myRole != ""){ //already joined
+          return; 
+        }
+
+        myRole = playerRole;
+        myRoomName = room;
+
+        document.getElementById("room-screen").style.display    = "none";
+        document.getElementById("loading-screen").style.display = "block";
+
+        makeMyComponents(playerRole);
+        
+      });
+
+      socket.on("room-closed", () => {       
+        document.getElementById("room-screen").style.display    = "block";
+        document.getElementById("loading-screen").style.display = "none";
+        document.getElementById("playing-screen").style.display = "none";
+        alert("ROOM CLOSED");
       });
 
       socket.on("ready-change", (player, readyText) => {
@@ -381,7 +466,7 @@
         let readyTextComponent = document.getElementById(player + "-connection");
         readyTextComponent.innerHTML = readyText;
         //if client is player1, additional check has to be done to see if both players are ready and start button should be shown
-        if (isPlayer1) {
+        if (myRole === "player1") {
           bothReady = checkIfBothReady();
           if (bothReady && getExpectedDeckSize() >= 40 && getExpectedDeckSize() <= 60) {
             startButton.style.display = "block";
@@ -423,74 +508,61 @@
         
       });
 
-      socket.on("draw-card", (player1, drawCard, rerolls) => {
+      socket.on("draw-card", (player, drawCard) => {
         //player1:  boolean, whether the player that drew the card is player 1
         //drawCard: String,  cardID of the card that was randomly selected to be added to the deck
         let playerSide;
         let newCardPath;
-        let samePlayer = isPlayer1 === player1;
+        let samePlayer = myRole === player;
         let cardId = drawCard;
-        if (isViewer) {
+        if (myRole === "viewer") {
           //samePlayer is set to true to ensure that viewer card list contains all cards
           newCardPath = imageApiPath + drawCard + ".jpg";
-          playerSide  = document.getElementById((player1 ? "player1" : "player2") + "-card-container");
+          playerSide  = document.getElementById(player + "-card-container");
           samePlayer  = true;
-        } else if (isPlayer1 === player1) {
+        } else if (myRole === player) {
           //player that drew a card
           //player sets their own buttons to be hidden, no need to do so here
           newCardPath = imageApiPath + drawCard + ".jpg";
-          playerSide  = document.getElementById((isPlayer1 ? "player1" : "player2") + "-card-container");
+          playerSide  = document.getElementById(player + "-card-container");
         } else {
           //not the player that drew a card
           newCardPath = "/public/images/back.png";
           cardId = "-1";
-          playerSide = document.getElementById((isPlayer1 ? "player2" : "player1") + "-card-container");
+          playerSide = document.getElementById(player+ "-card-container");
           myDrawButton.style.display   = "flex";
           myRerollButton.style.display = "flex";
         }
         setDrawnCard(playerSide, newCardPath, samePlayer, cardId);
-        setRerollText(rerolls);
       });
 
-      socket.on("reroll", (newCardId, player, numRerolls) => {
-        const player1 = player === "player1";
+      socket.on("reroll", (newCardId, player) => {
         const playerSide = document.getElementById(player + "-card-container");
-        if (isViewer || isPlayer1 === player1) {
+        if (myRole === "viewer" || myRole === player) {
           let lastCard = playerSide.lastChild;
           lastCard.src = imageApiPath + newCardId + ".jpg";
           lastCard.alt = newCardId;
-          setRerollText(numRerolls);
         }
       });
 
-      socket.on("ability-update", (abilityStatus) => {
-        if (isViewer){
-          return;
-        }
-        const player    = isPlayer1 ? "player1" : "player2";
-        const abilities = abilityStatus[player];
-        
-        for (const abilityId in abilities){
-          const canUse     = abilities[abilityId];
-          const abilityDiv = document.getElementById(abilityId + "-ability");
-
-          abilityDiv.style.opacity = canUse ? 1.0 : 0.2;
-        }
+      socket.on("data-change", (player1Rerolls, player2Rerolls, abilityStatus) => {
+        setRerollText(myRole === "player1" ? player1Rerolls : player2Rerolls);
+        setAbilityStatus(abilityStatus);
       });
 
-      socket.on("ability", (player1, myRerolls, opponentRerolls) => {
-        if (isViewer){
-          return;
-        }
-        if (player1 === isPlayer1){
-          setRerollText(myRerolls);
-        } else {
-          setRerollText(opponentRerolls);
-        }
-      });
+      // socket.on("ability", (player) => {
+      //   if (myRole === "viewer"){
+      //     return;
+      //   }
+      //   if (myRole === player){
+      //     setRerollText(myRerolls);
+      //   } else {
+      //     setRerollText(opponentRerolls);
+      //   }
+      // });
 
       socket.on("end-game", () => {
-        if (isViewer){
+        if (myRole === "viewer"){
           return;
         }
         const playingScreen = document.getElementById("playing-screen");
@@ -500,11 +572,11 @@
         endScreen.style.display     = "flex";
       });
 
-      socket.on("download", (player1, ydkFile) => {
-        if (isViewer){
+      socket.on("download", (player, ydkFile) => {
+        if (myRole === "viewer"){
           return;
         }
-        if (player1 === isPlayer1){
+        if (myRole === player){
           download("NoahDeck.ydk", ydkFile);
         }
       });
