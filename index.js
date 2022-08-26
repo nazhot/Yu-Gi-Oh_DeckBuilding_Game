@@ -307,7 +307,7 @@ io.on("connection", (socket) => {
     const joinerRole   = roomData.players === 1 ? "player2" : "viewer";
 
     roomData[socket.id] = getDefaultPlayerData(joinerName, joinerRole);
-    roomData.player2    = roomData.player2 ?? socket.id;
+    roomData.player2    = roomData.player2 === undefined ? socket.id : roomData.player2;
 
     const player1Id   = roomData.player1;
     const player2Id   = roomData.player2;
