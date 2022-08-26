@@ -269,7 +269,7 @@ function emitPlayerDataChanges(roomName){
 function cardsLeft(roomName, player, cardId){
   const roomData   = rooms[roomName];
   const myData     = roomData[roomData[player]];
-  let   cardsLeft  = roomData.banList[cardId] ?? 3;
+  let   cardsLeft  = roomData.banList[cardId] === undefined ? 3 : roomData.banList[cardId];
   let   cardsUsed  = 0;
 
   for (let i = 0; i < myData.cards.length; i++){
