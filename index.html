@@ -46,24 +46,24 @@
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-      let socket           = io();
-      let roomNameLength   = 4;
-      let numRerolls       = 5;
-      let listNames        = ["card", "ban", "set"]; //names used to get all dropdown information
-      let cardTypes        = ["spells", "traps", "monsters"];
-      let dropDowns        = {}; //holder for the three drop down elements, since they're so similar in name
-      let cardTypeElements = {};
-      let myRole           = "";
-      let myRoomName       = "";
-      let myUsername       = "";
+      let socket             = io();
+      const roomNameLength   = 4;
+      let numRerolls         = 5;
+      const listNames        = ["card", "ban", "set"]; //names used to get all dropdown information
+      const cardTypes        = ["spells", "traps", "monsters"];
+      const dropDowns        = {}; //holder for the three drop down elements, since they're so similar in name
+      const cardTypeElements = {};
+      let myRole             = "";
+      let myRoomName         = "";
+      let myUsername         = "";
 
-      let imageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics/"
-      let cardWidth    = "12.5%";
+      const imageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics/"
+      const cardWidth    = "12.5%";
   
-      let startButton        = document.getElementById("start-game-button");
-      let abilitiesContainer = document.getElementById("abilities-container");
-      let downloadButton     = document.getElementById("download-ydk");
-      let joinRoomForm       = document.getElementById("room-form");
+      const startButton        = document.getElementById("start-game-button");
+      const abilitiesContainer = document.getElementById("abilities-container");
+      const downloadButton     = document.getElementById("download-ydk");
+      const joinRoomForm       = document.getElementById("room-form");
 
       let myReadyButton;
       let myDrawButton;
@@ -72,7 +72,7 @@
       function makeRoom(){
         const roomHolder  = document.getElementById("rooms");
         const elementList = roomHolder.getElementsByTagName("li");
-        let   roomList    = [];
+        const roomList    = [];
 
         for (let i = 0; i < elementList.length; i++){
           roomList.push(elementList[i].innerHTML);
