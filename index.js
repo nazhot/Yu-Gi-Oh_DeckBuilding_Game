@@ -8,25 +8,23 @@ const fs = require("fs");
 
 app.use(express.static(__dirname));
 
-let currentPlayer = "player1";
-
-let rooms = {};
+const rooms = {};
 
 let cardData = fs.readFileSync("./public/cards/cardData.json");
 cardData = JSON.parse(cardData);
 
-let cardListFiles = fs.readdirSync("./public/cardLists/");
-let cardListNames = cardListFiles.map((x) => {
+const cardListFiles = fs.readdirSync("./public/cardLists/");
+const cardListNames = cardListFiles.map((x) => {
   return x.replace(".txt", "");
 });
 
-let banListFiles = fs.readdirSync("./public/banLists/");
-let banListNames = banListFiles.map((x) => {
+const banListFiles = fs.readdirSync("./public/banLists/");
+const banListNames = banListFiles.map((x) => {
   return x.replace(".json", "");
 });
 
-let setListFiles = fs.readdirSync("./public/setLists/");
-let setListNames = setListFiles.map((x) => {
+const setListFiles = fs.readdirSync("./public/setLists/");
+const setListNames = setListFiles.map((x) => {
   return x.replace(".json", "");
 });
 
@@ -36,7 +34,7 @@ mainDeckConnections = JSON.parse(mainDeckConnections);
 let totalUsages = fs.readFileSync("./public/connections/totalUsages.json");
 totalUsages = JSON.parse(totalUsages);
 
-let abilities = {
+const abilities = {
   get: () => {
     return {
     "Three For Two" : {
@@ -85,6 +83,7 @@ function checkIfCardTypeValid(roomName, player, cardId){
   const data = cardData[cardId];
 
   if (data === undefined) return false;
+
   const roomData     = rooms[roomName];
   const playerData   = roomData[getPlayers(roomName, player)[0]];
   const cardType     = data.cardType;
@@ -107,24 +106,23 @@ function getRandomCardWeighted(roomName, player, data, randomFactor){
   //data:         Object, keys are cardIds, values are weights
   //randomFactor: float,  0-1, how random to make the card draw, based on the connection map
 
-  let weights = {};
-  const roomData   = rooms[roomName];
-  const playerData = roomData[getPlayers(roomName, player)[0]];
+  const weights  = {};
+  const roomData = rooms[roomName];
+  const myData   = roomData[getPlayers(roomName, player)[0]];
 
   //add cards from given data set if they're in the card list, and the player can add it
   for (const [id, value] of Object.entries(data)){
-    if (playerData.cardsLeft[id] > 0 && checkIfCardTypeValid(roomName, player, id)){ //if undefined, this is also false
+    if (cardsLeft(roomName, player, id) > 0 && checkIfCardTypeValid(roomName, player, id)){ //if undefined, this is also false
       weights[id] = value;
     }
   }
 
   //add cards if they're in the card list, not in the current weight object, and player can still add it
   for (const id of roomData.cardIds){
-    if (weights[id] === undefined && playerData.cardsLeft[id] > 0 && checkIfCardTypeValid(roomName, player, id)){ //if undefined, this is also false
+    if (weights[id] === undefined && cardsLeft(roomName, player, id) > 0 && checkIfCardTypeValid(roomName, player, id)){ //if undefined, this is also false
       weights[id] = 1;
     }
   }
-
 
   //set each weight to 1 (randomFactor = 1) to itself (randomFactor = 0)
   let totalWeight = 0;
@@ -132,7 +130,6 @@ function getRandomCardWeighted(roomName, player, data, randomFactor){
     const divisor = (1 + randomFactor * (parseFloat(value) - 1));
     weights[id] = parseFloat(value) / divisor;
     totalWeight += weights[id];
-
   }
 
   //normalize array
@@ -148,17 +145,16 @@ function getRandomCardWeighted(roomName, player, data, randomFactor){
     countValue += value;
     lastId = id;
     if (randomValue < countValue){
-      playerData.cardsLeft[id]--;// = playerData.cardsLeft[id] - 1;
-      const data = cardData[id];
+      const data     = cardData[id];
       const cardType = data.cardType;
-      playerData[cardType + "sLeft"]--;// = playerData[cardType + "sLeft"] - 1;
+
+      myData[cardType + "sLeft"]--;
       return id;
     }
   }
   const fallBackData = cardData[lastId];
   const cardType = fallBackData.cardType; 
-  playerData[cardType + "sLeft"]++;// = playerData[cardType + "sLeft"] - 1;
-  playerData.cardsLeft[lastId]--;// = playerData.cardsLeft[lastId] - 1;
+  myData[cardType + "sLeft"]--;
   return lastId;
 
 }
@@ -200,23 +196,21 @@ function getAbilityStatus(roomName){
     const abilities = playerData.abilities;
     for (const ability in abilities){
       const abilityId = abilities[ability].id;
-      let canUse = player === currentPlayer;
-      canUse     = canUse && playerData.turnsBeforeUseAbility <= 0;
-      canUse     = canUse && abilities[ability].count() > 0;
-      canUse     = canUse && playerData.rerolls + abilities[ability].targetMe.rerolls >= 0;
+      let canUse = player === roomData.currentPlayer; //if not current player, can't use abilities
+          canUse = canUse && playerData.turnsBeforeUseAbility <= 0; //still turns to go before able to use ability
+          canUse = canUse && abilities[ability].count() > 0; //ability has ran out of uses
+          canUse = canUse && (playerData.rerolls + abilities[ability].targetMe.rerolls) >= 0; //after using ability, user will not have negative rerolls
 
       abilityStatus[player][abilityId] = canUse;
-
     }
   }
   return abilityStatus;
 }
 
-function getDefaultPlayerData(creatorName, role){
+function getDefaultPlayerData(playerName, role){
   return {
-    name: creatorName,
+    name: playerName,
     role: role,
-    cardsLeft: {},
     cards: [],
     rerolls: 5,
     turnsBeforeRerollGained: 5,
@@ -241,7 +235,7 @@ function makeRoom(roomName, creatorId, creatorName){
 }
 
 function emitRooms(){
-  let roomNames = [];
+  const roomNames = [];
   for (const roomName in rooms){
     roomNames.push(roomName);
   }
@@ -250,8 +244,8 @@ function emitRooms(){
 
 function getPlayers(roomName, playerRole){
   //returns array of ids for roomName that match playerRole
-  let players  = [];
-  let roomData = rooms[roomName];
+  const players  = [];
+  const roomData = rooms[roomName];
 
   for (const id in roomData){
     const data = roomData[id];
@@ -263,28 +257,46 @@ function getPlayers(roomName, playerRole){
 }
 
 function getPlayersData(roomName, playerRole, dataName){
-  let data = {};
-  const players = getPlayers[roomName, playerRole];
+  const data     = {};
+  const players  = getPlayers[roomName, playerRole];
   const roomData = rooms[roomName];
   for (const player of players){
     data[player] = roomData[dataName];
   }
-
   return data;
-}
-
-function emitAbilityChange(roomName){
-  io.to(roomName).emit("ability-update", getAbilityStatus(roomName));
 }
 
 function emitPlayerDataChanges(roomName){
   const roomData       = rooms[roomName];
   const player1Data    = roomData[getPlayers(roomName, "player1")[0]];
   const player2Data    = roomData[getPlayers(roomName, "player2")[0]]; 
+
+  player1Data.rerolls = Math.max(player1Data.rerolls, 0); //Christian was having issues with negative rerolls
+  player2Data.rerolls = Math.max(player2Data.rerolls, 0); //need to look into, for now we set a minimum of 0
+
   const player1Rerolls = player1Data.rerolls;
   const player2Rerolls = player2Data.rerolls;
 
   io.to(roomName).emit("data-change", player1Rerolls, player2Rerolls, getAbilityStatus(roomName));
+}
+
+function cardsLeft(roomName, player, cardId){
+  const roomData   = rooms[roomName];
+  const myData     = roomData[getPlayers(roomName, player)[0]];
+  let   cardsLeft  = roomData.banList[cardId] ?? 3;
+  let   cardsUsed  = 0;
+
+  for (let i = 0; i < myData.cards.length; i++){
+    if (myData.cards[i] === cardId){
+      cardsUsed++;
+    }
+  }
+
+  cardsLeft -= cardsUsed;
+  if (cardsLeft < 0){
+    console.log("CARD " + cardId + " IN ROOM " + roomName + " HAS " + Math.abs(cardsLeft) + " TOO MANY CARDS");
+  }
+  return cardsLeft;
 }
 
 app.get("/", (req, res) => {
@@ -339,7 +351,7 @@ io.on("connection", (socket) => {
     const cardListName = data["card-dropdown"];
     const banListName  = data["ban-dropdown"];
     const setListName  = data["set-dropdown"];
-    randomFactor       = data["randomFactor"];
+    const randomFactor = data["randomFactor"];
     
     const roomData  = rooms[roomName];
     const player1Id = roomData.player1Id;
@@ -354,61 +366,66 @@ io.on("connection", (socket) => {
       totalCardsAllowed += data[dataName];
     }
 
-    roomData.totalCardsAllowed = totalCardsAllowed * 2;
-
     //all names are the values of the dropdowns chosen by player 1
     //they correspond to the files stored on the server
-    let idFile = fs.readFileSync("./public/cardLists/" + cardListName + ".txt","utf-8");
-    roomData.cardIds = idFile.split("\n");
-    let banFile = fs.readFileSync("./public/banLists/" + banListName + ".json");
-    banList = JSON.parse(banFile);
-    //set the number of cards left for each player, default is 3, unless the banlist mentions the card
-    //then it's set to the banlist value
-    for (const id of roomData.cardIds) {
-      roomData[player1Id].cardsLeft[id] = banList[id] ? banList[id] : 3;
-      roomData[player2Id].cardsLeft[id] = banList[id] ? banList[id] : 3;
-    }
+    const idFile  = fs.readFileSync("./public/cardLists/" + cardListName + ".txt","utf-8");
+    const banFile = fs.readFileSync("./public/banLists/" + banListName + ".json");
+
+    roomData.cardIds           = idFile.split("\n");
+    roomData.banList           = JSON.parse(banFile);
+    roomData.totalCardsAllowed = totalCardsAllowed * 2;
+    roomData.randomFactor      = randomFactor;
+    // for (const id of roomData.cardIds) {
+    //   roomData[player1Id].cardsLeft[id] = banList[id] ? banList[id] : 3;
+    //   roomData[player2Id].cardsLeft[id] = banList[id] ? banList[id] : 3;
+    // }
     io.to(roomName).emit("start-game", roomData[player1Id].abilities);
-    currentPlayer = "player2";
     emitPlayerDataChanges(roomName);
-    currentPlayer = "player1";
+    roomData.currentPlayer = "player1";
   });
 
   socket.on("draw-card", (roomName, player) => {
     //drawing a card is what switches the currentPlayer
-    const roomData     = rooms[roomName];
-    const data         = roomData[getPlayers(roomName, player)[0]];
-    const lastCard     = data.cards[data.cards.length - 1];
+    const roomData = rooms[roomName];
+    const myData   = roomData[getPlayers(roomName, player)[0]];
+    const lastCard = myData.cards[myData.cards.length - 1];
     let drawCard;
     
-    if (data.nextCardGained === "same" && data.cardsLeft[lastCard] > 0 && checkIfCardTypeValid(roomName, player, lastCard)){
+    if (myData.nextCardGained === "same" && cardsLeft(roomName, player, lastCard) > 0 && checkIfCardTypeValid(roomName, player, lastCard)){
+      
       drawCard = lastCard;
-      data.cardsLeft[drawCard]--; //random function does this automatically
 
-    } else if (data.nextCardGained === "opponentSame"){
-      const opponentData = roomData[data.opponentId]; 
-      const opponentLastCard = opponentData.cards[opponentData.cards.length - 2];
-      if (data.cardsLeft[opponentLastCard] > 0 && checkIfCardTypeValid(roomName, player, opponentLastCard)){
+    } else if (myData.nextCardGained === "opponentSame"){
+
+      const opponentData     = roomData[myData.opponentId]; 
+      const opponentLastCard = opponentData.cards[opponentData.cards.length - 2]; // -2 since the opponent will have drawn a card since then
+      
+      if (cardsLeft(roomName, player, opponentLastCard) > 0 && checkIfCardTypeValid(roomName, player, opponentLastCard)){
+      
         drawCard = opponentLastCard;
-        data.cardsLeft[drawCard]--;
+      
+      } else {
+
+        drawCard = getRandomCard(roomName, player);
+
       }
     } else {
-      drawCard = getRandomCardWeightedByLastCard(roomName, player, lastCard, randomFactor);
+      drawCard = getRandomCardWeightedByLastCard(roomName, player, lastCard, roomData.randomFactor);
     }
 
-    data.cards.push(drawCard);
+    myData.cards.push(drawCard);
 
-    data.nextCardGained          = null;
-    data.turnsBeforeRerollGained = Math.max(--data.turnsBeforeRerollGained, 0);
-    data.turnsBeforeUseAbility   = Math.max(--data.turnsBeforeUseAbility, 0);
-    data.turnsBeforeUseReroll    = Math.max(--data.turnsBeforeUseReroll, 0);
+    myData.nextCardGained          = null;
+    myData.turnsBeforeRerollGained = Math.max(--myData.turnsBeforeRerollGained, 0);
+    myData.turnsBeforeUseAbility   = Math.max(--myData.turnsBeforeUseAbility, 0);
+    myData.turnsBeforeUseReroll    = Math.max(--myData.turnsBeforeUseReroll, 0);
     
-    if (data.turnsBeforeRerollGained <= 0){
-      data.rerolls += data.rerollsPerGain;
-      data.turnsBeforeRerollGained = data.totalTurnsBeforeRerollGained;
+    if (myData.turnsBeforeRerollGained <= 0){
+      myData.rerolls += myData.rerollsPerGain;
+      myData.turnsBeforeRerollGained = myData.totalTurnsBeforeRerollGained;
     }
 
-    currentPlayer                = player === "player1" ? "player2" : "player1";
+    roomData.currentPlayer = player === "player1" ? "player2" : "player1";
 
     roomData.totalCards++;
     if (roomData.totalCards >= roomData.totalCardsAllowed){
@@ -421,19 +438,18 @@ io.on("connection", (socket) => {
   });
 
   socket.on("reroll", (roomName, player) => {
-    const roomData     = rooms[roomName];
-    const playerData   = roomData[getPlayers(roomName, player)[0]];
+    const roomData = rooms[roomName];
+    const myData   = roomData[getPlayers(roomName, player)[0]];
     //don't reroll is player has no rerolls left, has a waiting period before rerolling, or has no cards
-    if (playerData.rerolls <= 0 || playerData.turnsBeforeUseReroll > 0 || playerData.cards.length == 0){
+    if (myData.rerolls <= 0 || myData.turnsBeforeUseReroll > 0 || myData.cards.length == 0){
       return;
     }
     
-    const playerCards    = playerData.cards;
+    const playerCards    = myData.cards;
     const previousCardId = playerCards[playerCards.length - 1];
     const drawCard       = getRandomCard(roomName, player);
 
-    playerData.rerolls--;
-    playerData.cardsLeft[previousCardId]++;
+    myData.rerolls--;
     playerCards[playerCards.length - 1] = drawCard;
   
     emitPlayerDataChanges(roomName);
@@ -444,7 +460,7 @@ io.on("connection", (socket) => {
     const roomData  = rooms[roomName];
     const myData    = roomData[getPlayers(roomName, player)[0]];
 
-    if (myData.turnsBeforeUseAbility > 0 || player != currentPlayer){
+    if (myData.turnsBeforeUseAbility > 0 || player != roomData.currentPlayer){
       return;
     }
 

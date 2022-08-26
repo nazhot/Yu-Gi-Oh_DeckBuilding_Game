@@ -29,18 +29,15 @@
     <div id="playing-screen" style="display: none">
       <div id="player1-play-side" class="side1">
         <div id="player1-card-container" class="card-container">
-
         </div>
       </div>
       <div id="card-and-powerups">
         <img src="/public/images/back.png" id="middle-card" />
         <div id="abilities-container">
-
         </div>
       </div>
       <div id="player2-play-side" class="side2">
         <div id="player2-card-container" class="card-container">
-
         </div>
       </div>
     </div>
@@ -51,7 +48,6 @@
     <script>
       let socket           = io();
       let roomNameLength   = 4;
-      let bothReady        = false;
       let numRerolls       = 5;
       let listNames        = ["card", "ban", "set"]; //names used to get all dropdown information
       let cardTypes        = ["spells", "traps", "monsters"];
@@ -74,44 +70,47 @@
       let myRerollButton;
 
       function makeRoom(){
-        const roomHolder = document.getElementById("rooms");
-        const elementList   = roomHolder.getElementsByTagName("li");
-        let   roomList      = [];
+        const roomHolder  = document.getElementById("rooms");
+        const elementList = roomHolder.getElementsByTagName("li");
+        let   roomList    = [];
+
         for (let i = 0; i < elementList.length; i++){
           roomList.push(elementList[i].innerHTML);
         }
+
         for (let i = 0; i < socket.id.length - roomNameLength; i += roomNameLength){
+
           const idSlice = socket.id.slice(i, i + roomNameLength);
 
           if (roomList.includes(idSlice)){
             continue;
           }
+
           let username = prompt("Please enter your name");
+
           if (username === null){
             return;
           }
-          username = username ? username : "Lame-o";
+
+          username   = username ? username : "Lame-o";
           myUsername = username;
+          
           document.getElementById("player1-username").innerHTML = myUsername + ":";
 
           socket.emit("make-room", idSlice, username);
           return;
-          
         }
       }
 
       function makeMyComponents(player){
         //player: String, "player1" or "player2"
         //this is used to generate the buttons/textboxs/dropdowns for each player
-        //ended up changing to js-generated HTML components due to the repetitive HTML
-        //any change being made to a component required changing it in 2+ places, here it can be one place
-        //this strategy won't be best for components that aren't symmetrical, but that's currently no componenets
 
         if (player === "viewer"){
           return;
         }
 
-        let myReadySide = document.getElementById(player + "-side");
+        const myReadySide = document.getElementById(player + "-side");
 
         myReadyButton               = document.createElement("button");
         myReadyButton.id            = player + "-ready-button";
@@ -126,16 +125,16 @@
         
         if (player === "player1"){
           for (let i = 0; i < listNames.length; i++) {
-            let listName        = listNames[i]; //card, ban, set
-            let capitalListName = listName.charAt(0).toUpperCase() + listName.slice(1);
-            let listLabel       = document.createElement("label");
-            let list            = document.createElement("select");
+            const listName        = listNames[i]; //card, ban, set
+            const capitalListName = listName.charAt(0).toUpperCase() + listName.slice(1);
 
+            const listLabel         = document.createElement("label");
             listLabel.htmlFor       = listName + "-list-select";
             listLabel.id            = listName + "-list-label";
             listLabel.style.display = "flex";
             listLabel.innerHTML     = capitalListName + " List";
 
+            const list         = document.createElement("select");
             list.name          = listName + "-list-select";
             list.id            = listName + "-list-select";
             list.style.display = "flex";
@@ -147,41 +146,41 @@
 
           for (const cardType of cardTypes){
             const capitalCardType = cardType.charAt(0).toUpperCase() + cardType.slice(1);
-            let cardTypeLabel     = document.createElement("label");
-            let cardTypeTextBox   = document.createElement("input");
 
-            cardTypeLabel.htmlFor       = cardType + "-count";
-            cardTypeLabel.id            = cardType + "-count-label";
-            cardTypeLabel.style.display = "flex";
-            cardTypeLabel.innerHTML     = capitalCardType + " Count";
+            const cardTypeLabel               = document.createElement("label");
+                  cardTypeLabel.htmlFor       = cardType + "-count";
+                  cardTypeLabel.id            = cardType + "-count-label";
+                  cardTypeLabel.style.display = "flex";
+                  cardTypeLabel.innerHTML     = capitalCardType + " Count";
 
-            cardTypeTextBox.id                    = cardType + "-count";
-            cardTypeTextBox.name                  = cardType + "-count";
-            cardTypeTextBox.style.display         = "flex";
-            cardTypeTextBox.type                  = "text"; //super neat fun fact, firefox doesn't care if you type non-numbers into here, just need to check in function
-            cardTypeTextBox.style.backgroundColor = "white";
-            cardTypeTextBox.onkeyup               = getExpectedDeckSize;
-            cardTypeTextBox.onpaste               = getExpectedDeckSize;
-            cardTypeElements[cardType]            = cardTypeTextBox;
+            const cardTypeTextBox                       = document.createElement("input");
+                  cardTypeTextBox.id                    = cardType + "-count";
+                  cardTypeTextBox.name                  = cardType + "-count";
+                  cardTypeTextBox.style.display         = "flex";
+                  cardTypeTextBox.type                  = "text"; //super neat fun fact, firefox doesn't care if you type non-numbers into here, just need to check in function
+                  cardTypeTextBox.style.backgroundColor = "white";
+                  cardTypeTextBox.onkeyup               = getExpectedDeckSize;
+                  cardTypeTextBox.onpaste               = getExpectedDeckSize;
+                  cardTypeElements[cardType]            = cardTypeTextBox;
 
             myReadySide.appendChild(cardTypeLabel);
             myReadySide.appendChild(cardTypeTextBox);
           }
 
-          let randomValueLabel    = document.createElement("label");
-          let randomValueDropdown = document.createElement("select");
-          
-          randomValueLabel.htmlFor       = "randomFactor";
-          randomValueLabel.style.display = "flex";
-          randomValueLabel.innerHTML     = "Random Factor";
+          const randomValueLabel             = document.createElement("label");   
+              randomValueLabel.htmlFor       = "randomFactor";
+              randomValueLabel.style.display = "flex";
+              randomValueLabel.innerHTML     = "Random Factor";
 
-          randomValueDropdown.style.display = "flex";
-          randomValueDropdown.id            = "randomFactor";
+          const randomValueDropdown               = document.createElement("select");
+                randomValueDropdown.style.display = "flex";
+                randomValueDropdown.id            = "randomFactor";
 
           for (let i = 0; i <= 100; i += 25){
-            let randomValue = document.createElement("option");
-            randomValue.innerHTML = i + "%";
-            randomValue.value = i / 100.0;
+            const randomValue           = document.createElement("option");
+                  randomValue.innerHTML = i + "%";
+                  randomValue.value     = i / 100.0;
+
             randomValueDropdown.appendChild(randomValue);
           }
           
@@ -191,7 +190,7 @@
           socket.emit("getLists", myRoomName);
         }
 
-        let myPlaySide = document.getElementById(player + "-play-side");
+        const myPlaySide = document.getElementById(player + "-play-side");
 
         myDrawButton               = document.createElement("button");
         myDrawButton.id            = player + "-draw-card";
@@ -210,18 +209,15 @@
         myRerollButton.style.display = "none";
         setRerollText(numRerolls);
         myRerollButton.addEventListener("click", () => {
-          //number of rerolls left is checked here to avoid any issues server side, since it can't readily check, it'd have to be told
-          //numRerolls is decremented when socket recieves the reroll message
           socket.emit("reroll", myRoomName, player);
         });
 
         myPlaySide.appendChild(myDrawButton);
         myPlaySide.appendChild(myRerollButton);
-
       }
 
       function makeToolTipText(abilityData){
-        let toolText         = abilityData.description + "<br />Me<br />";
+        let   toolText       = abilityData.description + "<br />Me<br />";
         const targetMe       = abilityData.targetMe;
         const targetOpponent = abilityData.targetOpponent;
 
@@ -234,30 +230,25 @@
           const value = targetOpponent[trait];
           toolText += "<br />•" +  trait + ": " + value;
         }
-   
-
-
         return toolText;
-
       }
 
       function makeAbilityComponent(abilityName, abilityData, row, col){
-        let newAbility = document.createElement("div");
+        const newAbility = document.createElement("div");
+              newAbility.className             = "ability-tooltip";
+              newAbility.id                    = abilityData.id + "-ability"
+              newAbility.style.backgroundColor = "orange";
+              newAbility.innerHTML             = abilityName;
+              newAbility.style.gridRow         = row + " / span 1";
+              newAbility.style.gridColumn      = col + " / span 1";
+              newAbility.addEventListener("click", () => {
+                socket.emit("ability", myRoomName, abilityName, myRole);
+              });
 
-        newAbility.className             = "ability-tooltip";
-        newAbility.id                    = abilityData.id + "-ability"
-        newAbility.style.backgroundColor = "orange";
-        newAbility.innerHTML             = abilityName;
-        newAbility.style.gridRow         = row + " / span 1";
-        newAbility.style.gridColumn      = col + " / span 1";
-        newAbility.addEventListener("click", () => {
-          socket.emit("ability", myRoomName, abilityName, myRole);
-        });
-
-        let newAbilityToolTip       = document.createElement("span");
-        newAbilityToolTip.id        = abilityData.id + "-ability-tooltip-text"
-        newAbilityToolTip.className = "ability-tooltip-text";
-        newAbilityToolTip.innerHTML = makeToolTipText(abilityData);
+        const newAbilityToolTip           = document.createElement("span");
+              newAbilityToolTip.id        = abilityData.id + "-ability-tooltip-text"
+              newAbilityToolTip.className = "ability-tooltip-text";
+              newAbilityToolTip.innerHTML = makeToolTipText(abilityData);
 
         abilitiesContainer.appendChild(newAbility);
         newAbility.appendChild(newAbilityToolTip);
@@ -265,8 +256,8 @@
       }
 
       function makeAbilities(abilitiesData){
-        let rowIndex    = 1;
-        let colIndex    = 1;
+        let   rowIndex  = 1;
+        let   colIndex  = 1;
         const totalRows = 2;
         const totalCols = 5;
 
@@ -281,33 +272,31 @@
       }
 
       function checkIfBothReady() {
-        let player1 = document.getElementById("player1-connection").innerHTML;
-        let player2 = document.getElementById("player2-connection").innerHTML;
+        const player1 = document.getElementById("player1-connection").innerHTML;
+        const player2 = document.getElementById("player2-connection").innerHTML;
         return player1 === "READY" && player2 === "READY";
       }
 
       function readyButtonClicked(player) {
         //player: "player1" or "player2"
-        if (myReadyButton.innerHTML === "READY") {
-          myReadyButton.innerHTML             = "NOT READY";
-          myReadyButton.style.backgroundColor = "darkred";
-        } else {
-          myReadyButton.innerHTML             = "READY";
-          myReadyButton.style.backgroundColor = "darkgreen";
-        }
+        const ready = myReadyButton.innerHTML === "READY";
+
+        myReadyButton.innerHTML             = ready ? "NOT READY" : "READY";
+        myReadyButton.style.backgroundColor = ready ? "darkred"   : "darkgreen";
+  
         //send out message so that other player/viewer can see your current status
         socket.emit("ready-change", myRoomName, player, myReadyButton.innerHTML);
       }
 
-      function setDrawnCard(playerSide, drawCard, samePlayer, cardId) {
+      function setDrawnCard(playerSide, drawCard, cardId) {
         //playerSide: dom element, div that correlates with the users side
         //drawCard:   String,      path to the card image to display
         //samePlayer: boolean,     if the player calling this function is the same one that had drawn the card
         //cardId:     String,      the id of the card, to be stored in the alt of the image, for updating counts on server side if rerolled
-        let newCard = document.createElement("img");
-        newCard.src = drawCard;
-        newCard.alt = cardId;
-        newCard.style.width = cardWidth;
+        const newCard             = document.createElement("img");
+              newCard.src         = drawCard;
+              newCard.alt         = cardId;
+              newCard.style.width = cardWidth;
         //when moused over, show the image in the middle card
         //when not moused over, default to card back
         newCard.onmouseover = () => {
@@ -328,9 +317,11 @@
       function getExpectedDeckSize(){
         let totalCount = 0;
         for (const cardType of cardTypes){
-          let textBox = document.getElementById(cardType + "-count");
-          let value = textBox.value;
+          const textBox = document.getElementById(cardType + "-count");
+          const value   = textBox.value;
+
           totalCount += Math.floor(value);
+
           if (isNaN(totalCount)){
             textBox.style.backgroundColor = "red";
             return -1;
@@ -359,11 +350,11 @@
       }
 
       function download(filename, text) {
-        var element = document.createElement('a');
-        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-        element.setAttribute('download', filename);
+        const element = document.createElement('a');
+              element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+              element.setAttribute('download', filename);
+              element.style.display = 'none';
 
-        element.style.display = 'none';
         document.body.appendChild(element);
 
         element.click();
@@ -373,7 +364,7 @@
 
 
       startButton.addEventListener("click", () => {
-        let data = {};
+        const data = {};
 
         for (const listName of listNames){
           data[listName + "-dropdown"] = dropDowns[listName].value;
@@ -386,6 +377,7 @@
         }
 
         data.randomFactor = document.getElementById("randomFactor").value;
+
         socket.emit("start-game", myRoomName, data);
         myDrawButton.style.display   = "flex";
         myRerollButton.style.display = "flex";
@@ -414,8 +406,6 @@
           }
           alert("No room found with name " + roomInput.value);
         }
-        
- 
       });
 
       socket.on("rooms", (roomList) => {
@@ -424,12 +414,10 @@
           roomsParent.removeChild(roomsParent.firstChild);
         }
         for (const roomName of roomList){
-          const room = document.createElement("li");
-
-          room.innerHTML = roomName;
+          const room           = document.createElement("li");
+                room.innerHTML = roomName;
 
           roomsParent.appendChild(room);
-
         }
       });
 
@@ -443,14 +431,13 @@
           return; 
         }
 
-        myRole = playerRole;
+        myRole     = playerRole;
         myRoomName = room;
 
         document.getElementById("room-screen").style.display    = "none";
         document.getElementById("loading-screen").style.display = "block";
 
-        makeMyComponents(playerRole);
-        
+        makeMyComponents(playerRole); 
       });
 
       socket.on("room-closed", () => {       
@@ -463,16 +450,20 @@
       socket.on("ready-change", (player, readyText) => {
         //player:    String, "player1" or "player2", whoever clicked their ready button
         //readyText: String, "READY" or "NOT READY", whatever the button's text value now is
-        let readyTextComponent = document.getElementById(player + "-connection");
-        readyTextComponent.innerHTML = readyText;
+        const readyTextComponent           = document.getElementById(player + "-connection");
+              readyTextComponent.innerHTML = readyText;
         //if client is player1, additional check has to be done to see if both players are ready and start button should be shown
-        if (myRole === "player1") {
-          bothReady = checkIfBothReady();
-          if (bothReady && getExpectedDeckSize() >= 40 && getExpectedDeckSize() <= 60) {
-            startButton.style.display = "block";
-          } else {
-            startButton.style.display = "none";
-          }
+        if (myRole === "player2" || myRole === "viewer") {
+          return;
+        }
+
+        const bothReady = checkIfBothReady();
+        const deckSize  = getExpectedDeckSize();
+
+        if (bothReady && deckSize >= 40 && deckSize <= 60) {
+          startButton.style.display = "block";
+        } else {
+          startButton.style.display = "none";
         }
       });
 
@@ -484,16 +475,16 @@
           ban: banLists,
           set: setLists,
         };
-        for (let i = 0; i < listNames.length; i++) {
+
+        for (const i = 0; i < listNames.length; i++) {
           let listName = listNames[i]; //card, ban, set
-          for (let j = 0; j < lists[listName].length; j++) {
-            let list     = lists[listName];
-            let newEntry = document.createElement("option");
-
-            newEntry.value     = list[j];
-            newEntry.innerHTML = list[j];
-
-            let dropDown = document.getElementById(listName + "-list-select");
+          for (const j = 0; j < lists[listName].length; j++) {
+            const list               = lists[listName];
+            const dropDown           = document.getElementById(listName + "-list-select");
+            const newEntry           = document.createElement("option");
+                  newEntry.value     = list[j];
+                  newEntry.innerHTML = list[j];
+            
             dropDown.appendChild(newEntry);
           }
         }
@@ -501,7 +492,7 @@
 
       socket.on("start-game", (abilitiesData) => {
         //player 1 takes care of making the right buttons visible when they click the start button
-        //no need to do so here, just change the screen
+        //no need to do so here, just change the screen and make the abilities
         makeAbilities(abilitiesData);
         document.getElementById("loading-screen").style.display = "none";
         document.getElementById("playing-screen").style.display = "inline-block";
@@ -509,40 +500,32 @@
       });
 
       socket.on("draw-card", (player, drawCard) => {
-        //player1:  boolean, whether the player that drew the card is player 1
+        //player:   String, "player1" or "player2", whoever just drew a card
         //drawCard: String,  cardID of the card that was randomly selected to be added to the deck
-        let playerSide;
-        let newCardPath;
-        let samePlayer = myRole === player;
-        let cardId = drawCard;
-        if (myRole === "viewer") {
-          //samePlayer is set to true to ensure that viewer card list contains all cards
-          newCardPath = imageApiPath + drawCard + ".jpg";
-          playerSide  = document.getElementById(player + "-card-container");
-          samePlayer  = true;
-        } else if (myRole === player) {
-          //player that drew a card
-          //player sets their own buttons to be hidden, no need to do so here
-          newCardPath = imageApiPath + drawCard + ".jpg";
-          playerSide  = document.getElementById(player + "-card-container");
-        } else {
-          //not the player that drew a card
-          newCardPath = "/public/images/back.png";
-          cardId = "-1";
-          playerSide = document.getElementById(player+ "-card-container");
+        const showCard    = (myRole === "viewer" || myRole === player);
+        const cardId      = showCard ? drawCard : -1;
+        const newCardPath = showCard ? (imageApiPath + drawCard + ".jpg") : "/public/images/back.png";
+        const playerSide  = document.getElementById(player+ "-card-container");
+        
+        if (!showCard){
           myDrawButton.style.display   = "flex";
           myRerollButton.style.display = "flex";
         }
-        setDrawnCard(playerSide, newCardPath, samePlayer, cardId);
+
+        setDrawnCard(playerSide, newCardPath, cardId);
       });
 
       socket.on("reroll", (newCardId, player) => {
         const playerSide = document.getElementById(player + "-card-container");
-        if (myRole === "viewer" || myRole === player) {
-          let lastCard = playerSide.lastChild;
-          lastCard.src = imageApiPath + newCardId + ".jpg";
-          lastCard.alt = newCardId;
+        const showCard = (myRole === "viewer" || myRole === player);
+
+        if (!showCard){
+          return;
         }
+
+        const lastCard     = playerSide.lastChild;
+              lastCard.src = imageApiPath + newCardId + ".jpg";
+              lastCard.alt = newCardId;
       });
 
       socket.on("data-change", (player1Rerolls, player2Rerolls, abilityStatus) => {
@@ -550,21 +533,11 @@
         setAbilityStatus(abilityStatus);
       });
 
-      // socket.on("ability", (player) => {
-      //   if (myRole === "viewer"){
-      //     return;
-      //   }
-      //   if (myRole === player){
-      //     setRerollText(myRerolls);
-      //   } else {
-      //     setRerollText(opponentRerolls);
-      //   }
-      // });
-
       socket.on("end-game", () => {
         if (myRole === "viewer"){
           return;
         }
+        
         const playingScreen = document.getElementById("playing-screen");
         const endScreen     = document.getElementById("end-screen");
 
