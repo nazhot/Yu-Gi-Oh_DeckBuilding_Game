@@ -476,10 +476,10 @@
           set: setLists,
         };
 
-        for (const i = 0; i < listNames.length; i++) {
-          let listName = listNames[i]; //card, ban, set
-          for (const j = 0; j < lists[listName].length; j++) {
-            const list               = lists[listName];
+        for (let i = 0; i < listNames.length; i++) {
+          const listName = listNames[i]; //card, ban, set
+          const list     = lists[listName];
+          for (let j = 0; j < lists[listName].length; j++) {
             const dropDown           = document.getElementById(listName + "-list-select");
             const newEntry           = document.createElement("option");
                   newEntry.value     = list[j];

@@ -78,14 +78,13 @@ const abilities = {
   }}
 }
 
-
 function checkIfCardTypeValid(roomName, player, cardId){
   const data = cardData[cardId];
 
   if (data === undefined) return false;
 
   const roomData     = rooms[roomName];
-  const playerData   = roomData[getPlayers(roomName, player)[0]];
+  const playerData   = roomData[roomData[player]];
   const cardType     = data.cardType;
   const extraDeck    = data.extraDeck;
   const cardTypeLeft = playerData[cardType + "sLeft"];
@@ -97,7 +96,6 @@ function checkIfCardTypeValid(roomName, player, cardId){
 
 function getRandomCard(roomName, player) {
   //player: String, "player1" or "player2", whoever is drawing the card
-
   return getRandomCardWeighted(roomName, player, {}, 1);
 }
 
@@ -108,11 +106,11 @@ function getRandomCardWeighted(roomName, player, data, randomFactor){
 
   const weights  = {};
   const roomData = rooms[roomName];
-  const myData   = roomData[getPlayers(roomName, player)[0]];
+  const myData   = roomData[roomData[player]];
 
   //add cards from given data set if they're in the card list, and the player can add it
   for (const [id, value] of Object.entries(data)){
-    if (cardsLeft(roomName, player, id) > 0 && checkIfCardTypeValid(roomName, player, id)){ //if undefined, this is also false
+    if (roomData.cardIds.includes(id) && cardsLeft(roomName, player, id) > 0 && checkIfCardTypeValid(roomName, player, id)){ //if undefined, this is also false
       weights[id] = value;
     }
   }
@@ -139,12 +137,13 @@ function getRandomCardWeighted(roomName, player, data, randomFactor){
 
   const randomValue = Math.random();
   let countValue    = 0;
-  let lastId;
+  let lastId        = "300302042"; //this a random skill card, forever log showed fallbackData not being set
+                                   //I imagine it is because there was nothing in weights
 
   for (const [id, value] of Object.entries(weights)){
-    countValue += value;
+    countValue += value; 
     lastId = id;
-    if (randomValue < countValue){
+    if (randomValue <= countValue){
       const data     = cardData[id];
       const cardType = data.cardType;
 
@@ -152,8 +151,13 @@ function getRandomCardWeighted(roomName, player, data, randomFactor){
       return id;
     }
   }
+  console.log("Fall back data had to be used");
+  console.log("Room:         " + roomName);
+  console.log("Player:       " + player);
+  console.log("Weights size: " + Object.keys(weights).length)
+  console.log("Id:           " + lastId);
   const fallBackData = cardData[lastId];
-  const cardType = fallBackData.cardType; 
+  const cardType     = fallBackData.cardType; 
   myData[cardType + "sLeft"]--;
   return lastId;
 
@@ -168,14 +172,18 @@ function getRandomCardWeightedByLastCard(roomName, player, lastCard, randomFacto
   //lastCard:     String, id of the last card drawn by player
   //randomFactor: float,  0-1, how random to make the card draw, based on the connection map
 
-  if (lastCard === null) return getRandomCard(roomName, player);
-
-  let connectionsToLastCard = mainDeckConnections[lastCard]; //can I assume lastCard is always in mainDeckConnections?
-
-  if (connectionsToLastCard === undefined) {
-    return getRandomCardWeightedByTotalCount(roomName, player, randomFactor);
+  if (lastCard === undefined) {
+    console.log(player + " has no last card, going random"); 
+    return getRandomCard(roomName, player);
   }
 
+  const connectionsToLastCard = mainDeckConnections[lastCard]; //can I assume lastCard is always in mainDeckConnections?
+
+  if (connectionsToLastCard === undefined) {
+    console.log(player + " has no connections with the last card, going weighted by total")
+    return getRandomCardWeightedByTotalCount(roomName, player, randomFactor);
+  }
+  console.log(player + " has connection to last card, going weighted by last card")
   return getRandomCardWeighted(roomName, player, connectionsToLastCard, randomFactor);
 }
 
@@ -187,8 +195,8 @@ function getAbilityStatus(roomName){
   const roomData =  rooms[roomName];
 
   const ids = {
-    player1: roomData.player1Id,
-    player2: roomData.player2Id
+    player1: roomData.player1,
+    player2: roomData.player2
   }
 
   for (const player in abilityStatus){
@@ -228,8 +236,10 @@ function getDefaultPlayerData(playerName, role){
 
 function makeRoom(roomName, creatorId, creatorName){
   rooms[roomName] = {
-    players: 1,
-    viewers: 0
+    players:    1,
+    viewers:    0,
+    totalCards: 0,
+    player1:    creatorId
   };
   rooms[roomName][creatorId] = getDefaultPlayerData(creatorName, "player1");
 }
@@ -242,34 +252,10 @@ function emitRooms(){
   io.emit("rooms", roomNames);
 }
 
-function getPlayers(roomName, playerRole){
-  //returns array of ids for roomName that match playerRole
-  const players  = [];
-  const roomData = rooms[roomName];
-
-  for (const id in roomData){
-    const data = roomData[id];
-    if (data.role === playerRole){
-      players.push(id);
-    }
-  }
-  return players;
-}
-
-function getPlayersData(roomName, playerRole, dataName){
-  const data     = {};
-  const players  = getPlayers[roomName, playerRole];
-  const roomData = rooms[roomName];
-  for (const player of players){
-    data[player] = roomData[dataName];
-  }
-  return data;
-}
-
 function emitPlayerDataChanges(roomName){
   const roomData       = rooms[roomName];
-  const player1Data    = roomData[getPlayers(roomName, "player1")[0]];
-  const player2Data    = roomData[getPlayers(roomName, "player2")[0]]; 
+  const player1Data    = roomData[roomData.player1];
+  const player2Data    = roomData[roomData.player2]; 
 
   player1Data.rerolls = Math.max(player1Data.rerolls, 0); //Christian was having issues with negative rerolls
   player2Data.rerolls = Math.max(player2Data.rerolls, 0); //need to look into, for now we set a minimum of 0
@@ -282,7 +268,7 @@ function emitPlayerDataChanges(roomName){
 
 function cardsLeft(roomName, player, cardId){
   const roomData   = rooms[roomName];
-  const myData     = roomData[getPlayers(roomName, player)[0]];
+  const myData     = roomData[roomData[player]];
   let   cardsLeft  = roomData.banList[cardId] ?? 3;
   let   cardsUsed  = 0;
 
@@ -293,9 +279,11 @@ function cardsLeft(roomName, player, cardId){
   }
 
   cardsLeft -= cardsUsed;
+
   if (cardsLeft < 0){
     console.log("CARD " + cardId + " IN ROOM " + roomName + " HAS " + Math.abs(cardsLeft) + " TOO MANY CARDS");
   }
+
   return cardsLeft;
 }
 
@@ -319,17 +307,16 @@ io.on("connection", (socket) => {
     const joinerRole   = roomData.players === 1 ? "player2" : "viewer";
 
     roomData[socket.id] = getDefaultPlayerData(joinerName, joinerRole);
+    roomData.player2    = roomData.player2 ?? socket.id;
 
-    const player1Id   = getPlayers(roomName, "player1")[0];
-    const player2Id   = getPlayers(roomName, "player2")[0];
+    const player1Id   = roomData.player1;
+    const player2Id   = roomData.player2;
     const player1Name = roomData[player1Id].name;
     const player2Name = roomData[player2Id].name;
 
     roomData[player1Id].opponentId  = player2Id;
     roomData[player2Id].opponentId  = player1Id;
-    roomData.player1Id = player1Id;
-    roomData.player2Id = player2Id;
-    roomData.totalCards = 0;
+    roomData.player1                = player1Id;
 
     roomData.players++;
     socket.join(roomName);
@@ -354,8 +341,8 @@ io.on("connection", (socket) => {
     const randomFactor = data["randomFactor"];
     
     const roomData  = rooms[roomName];
-    const player1Id = roomData.player1Id;
-    const player2Id = roomData.player2Id;
+    const player1Id = roomData.player1;
+    const player2Id = roomData.player2;
 
     let totalCardsAllowed = 0;
     for (const type of ["spells", "traps", "monsters"]){
@@ -375,6 +362,7 @@ io.on("connection", (socket) => {
     roomData.banList           = JSON.parse(banFile);
     roomData.totalCardsAllowed = totalCardsAllowed * 2;
     roomData.randomFactor      = randomFactor;
+    console.log(randomFactor);
     // for (const id of roomData.cardIds) {
     //   roomData[player1Id].cardsLeft[id] = banList[id] ? banList[id] : 3;
     //   roomData[player2Id].cardsLeft[id] = banList[id] ? banList[id] : 3;
@@ -387,7 +375,7 @@ io.on("connection", (socket) => {
   socket.on("draw-card", (roomName, player) => {
     //drawing a card is what switches the currentPlayer
     const roomData = rooms[roomName];
-    const myData   = roomData[getPlayers(roomName, player)[0]];
+    const myData   = roomData[roomData[player]];
     const lastCard = myData.cards[myData.cards.length - 1];
     let drawCard;
     
@@ -439,7 +427,7 @@ io.on("connection", (socket) => {
 
   socket.on("reroll", (roomName, player) => {
     const roomData = rooms[roomName];
-    const myData   = roomData[getPlayers(roomName, player)[0]];
+    const myData   = roomData[roomData[player]];
     //don't reroll is player has no rerolls left, has a waiting period before rerolling, or has no cards
     if (myData.rerolls <= 0 || myData.turnsBeforeUseReroll > 0 || myData.cards.length == 0){
       return;
@@ -458,7 +446,7 @@ io.on("connection", (socket) => {
 
   socket.on("ability", (roomName, abilityName, player) => {
     const roomData  = rooms[roomName];
-    const myData    = roomData[getPlayers(roomName, player)[0]];
+    const myData    = roomData[roomData[player]];
 
     if (myData.turnsBeforeUseAbility > 0 || player != roomData.currentPlayer){
       return;
@@ -490,9 +478,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("download", (roomName, player) =>{
-    const roomData     = rooms[roomName];
-    const playerData   = roomData[getPlayers(roomName, player)[0]];
-    const cards        = playerData.cards;
+    const roomData = rooms[roomName];
+    const myData   = roomData[roomData[player]];
+    const cards    = myData.cards;
 
     let ydkFile = "#main";
     for (const card of cards){
