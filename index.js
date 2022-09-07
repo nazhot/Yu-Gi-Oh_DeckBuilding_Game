@@ -9,6 +9,7 @@ const fs = require("fs");
 app.use(express.static(__dirname));
 
 const rooms = {};
+const cardTypes = ["Spells", "Traps", "Normal Monsters", "Effect Monsters"];
 
 let cardData = fs.readFileSync("./public/cards/cardData.json");
 cardData = JSON.parse(cardData);
@@ -78,7 +79,19 @@ const abilities = {
   }}
 }
 
-function checkIfCardTypeValid(roomName, player, cardId){
+function cleanCardType(cardType, replace){
+  return cardType.toLowerCase().replace(" ", replace);
+}
+
+function getCardType(cardData){
+  if (cardData.specificCardType === undefined || cardData.cardType === "spell" || cardData.cardType === "trap"){
+    return cardData.cardType;
+  }
+  const cardType = cardData.specificCardType + cardData.cardType;
+  return cleanCardType(cardType, "");
+}
+
+function checkIfCardTypeValid(roomName, player, cardId, extraDeckAllowed){
   updateCardTypeCounts(roomName);
   const data = cardData[cardId];
 
@@ -86,13 +99,15 @@ function checkIfCardTypeValid(roomName, player, cardId){
 
   const roomData        = rooms[roomName];
   const playerData      = roomData[roomData[player]];
-  const cardType        = data.cardType;
-  const extraDeck       = data.extraDeck;
+  const cardType        = getCardType(data); //spell/trap or effectmonster/normalmonster
+  const extraDeck       = data.extraDeck; 
   const cardTypeAllowed = playerData[cardType + "sAllowed"];
   const cardTypeUsed    = playerData[cardType + "sUsed"];
 
-  if (extraDeck) return false;
-
+  if (extraDeck != extraDeckAllowed) return false;
+  if (extraDeckAllowed){ //if this is for the extra deck (line above is true), then this should just return true since user isn't putting in any data for extra deck monsters
+    return true;
+  }
   if (cardTypeAllowed - cardTypeUsed < 0){
     roomData.logText += "\nERROR: " + cardData[cardId].name + " appears too many times in " + player + "'s deck";
   }
@@ -100,16 +115,16 @@ function checkIfCardTypeValid(roomName, player, cardId){
   return cardTypeAllowed - cardTypeUsed > 0;
 }
 
-function checkIfCardValid(roomName, player, cardId){
-  return checkIfCardTypeValid(roomName, player, cardId) && cardsLeft(roomName, player, cardId) > 0;
+function checkIfCardValid(roomName, player, cardId, extraDeckAllowed){
+  return checkIfCardTypeValid(roomName, player, cardId, extraDeckAllowed) && cardsLeft(roomName, player, cardId) > 0;
 }
 
-function getRandomCard(roomName, player) {
+function getRandomCard(roomName, player, extraDeckAllowed) {
   //player: String, "player1" or "player2", whoever is drawing the card
-  return getRandomCardWeighted(roomName, player, {}, 1);
+  return getRandomCardWeighted(roomName, player, {}, 1, extraDeckAllowed);
 }
 
-function getRandomCardWeighted(roomName, player, data, randomFactor){
+function getRandomCardWeighted(roomName, player, data, randomFactor, extraDeckAllowed){
   //player:       String, "player1" or "player2"
   //data:         Object, keys are cardIds, values are weights
   //randomFactor: float,  0-1, how random to make the card draw, based on the connection map
@@ -119,14 +134,14 @@ function getRandomCardWeighted(roomName, player, data, randomFactor){
 
   //add cards from given data set if they're in the card list, and the player can add it
   for (const [id, value] of Object.entries(data)){
-    if (roomData.cardIds.includes(id) && checkIfCardValid(roomName, player, id)){ //if undefined, this is also false
+    if (roomData.cardIds.includes(id) && checkIfCardValid(roomName, player, id, extraDeckAllowed)){ //if undefined, this is also false
       weights[id] = value;
     }
   }
 
   //add cards if they're in the card list, not in the current weight object, and player can still add it
   for (const id of roomData.cardIds){
-    if (weights[id] === undefined && checkIfCardValid(roomName, player, id)){ //if undefined, this is also false
+    if (weights[id] === undefined && checkIfCardValid(roomName, player, id, extraDeckAllowed)){ //if undefined, this is also false
       weights[id] = 1;
     }
   }
@@ -167,28 +182,28 @@ function getRandomCardWeighted(roomName, player, data, randomFactor){
 
 }
 
-function getRandomCardWeightedByTotalCount(roomName, player, randomFactor){
-  return getRandomCardWeighted(roomName, player, totalUsages, randomFactor);
+function getRandomCardWeightedByTotalCount(roomName, player, randomFactor, extraDeckAllowed){
+  return getRandomCardWeighted(roomName, player, totalUsages, randomFactor, extraDeckAllowed);
 }
 
-function getRandomCardWeightedByLastCard(roomName, player, lastCard, randomFactor){
+function getRandomCardWeightedByLastCard(roomName, player, lastCard, randomFactor, extraDeckAllowed){
   //player:       String, "player1" or "player2", whoever is drawing the card
   //lastCard:     String, id of the last card drawn by player
   //randomFactor: float,  0-1, how random to make the card draw, based on the connection map
 
   if (lastCard === undefined) {
     rooms[roomName].logText += "\n" + player + " has no last card, going random"; 
-    return getRandomCard(roomName, player);
+    return getRandomCard(roomName, player, extraDeckAllowed);
   }
 
   const connectionsToLastCard = mainDeckConnections[lastCard]; //can I assume lastCard is always in mainDeckConnections?
 
   if (connectionsToLastCard === undefined) {
     rooms[roomName].logText += "\n" + player + " has no connections to last card (" + cardData[lastCard].name + "), going weighted by total";
-    return getRandomCardWeightedByTotalCount(roomName, player, randomFactor);
+    return getRandomCardWeightedByTotalCount(roomName, player, randomFactor, extraDeckAllowed);
   }
   rooms[roomName].logText += "\n" + player + " has connection to last card (" + cardData[lastCard].name + "), going weighted by last card";
-  return getRandomCardWeighted(roomName, player, connectionsToLastCard, randomFactor);
+  return getRandomCardWeighted(roomName, player, connectionsToLastCard, randomFactor, extraDeckAllowed);
 }
 
 function getAbilityStatus(roomName){
@@ -220,6 +235,7 @@ function getAbilityStatus(roomName){
 }
 
 function getDefaultPlayerData(playerName, role){
+  //TODO: update this so that it takes info from cardTypes
   return {
     name: playerName,
     role: role,
@@ -233,7 +249,8 @@ function getDefaultPlayerData(playerName, role){
     nextCardGained: null,
     spellsLeft: 0,
     trapsLeft: 0,
-    monstersLeft: 0,
+    normalmonstersLeft: 0,
+    effectmonstersLeft: 0,
     abilities: abilities.get()
   }
 }
@@ -311,16 +328,16 @@ function updateCardTypeCounts(roomName){
   for (const player in players){
     const playerData  = players[player];
     const playerCards = playerData.cards;
-
-    playerData.monstersUsed = 0;
-    playerData.spellsUsed   = 0;
-    playerData.trapsUsed    = 0;
+    for (const cardType of cardTypes){
+      const dataCardType = cleanCardType(cardType, "");
+      playerData[dataCardType + "Used"] = 0;
+    }
 
     for (const cardId of playerCards){
       if (cardId === null){ //last card set to null on reroll
         continue;
       }
-      const cardType = cardData[cardId].cardType;
+      const cardType = getCardType(cardData[cardId]);
       playerData[cardType + "sUsed"]++;
     }
   }
@@ -390,9 +407,11 @@ io.on("connection", (socket) => {
     roomData.logText += "\nSet list for room:  " + setListName;
 
     let totalCardsAllowed = 0;
-    for (const type of ["spells", "traps", "monsters"]){
-      const dataName = type + "-textbox";
-      const propertyName = type + "Allowed";
+    for (const cardType of cardTypes){
+      const componentCardType = cleanCardType(cardType, "-");
+      const propCardType      = cleanCardType(cardType, "");
+      const dataName = componentCardType + "-textbox";
+      const propertyName = propCardType + "Allowed";
       roomData[player1Id][propertyName] = data[dataName];
       roomData[player2Id][propertyName] = data[dataName];
       totalCardsAllowed += data[dataName];
@@ -423,7 +442,7 @@ io.on("connection", (socket) => {
     const lastCard = myData.cards[myData.cards.length - 1];
     let drawCard;
     
-    if (myData.nextCardGained === "same" && checkIfCardValid(roomName, player, lastCard)){
+    if (myData.nextCardGained === "same" && checkIfCardValid(roomName, player, lastCard, false)){
       
       drawCard = lastCard;
 
@@ -432,17 +451,17 @@ io.on("connection", (socket) => {
       const opponentData     = roomData[myData.opponentId]; 
       const opponentLastCard = opponentData.cards[opponentData.cards.length - 2]; // -2 since the opponent will have drawn a card since then
       
-      if (checkIfCardValid(roomName, player, opponentLastCard)){
+      if (checkIfCardValid(roomName, player, opponentLastCard, false)){
       
         drawCard = opponentLastCard;
       
       } else {
 
-        drawCard = getRandomCard(roomName, player);
+        drawCard = getRandomCard(roomName, player, false);
 
       }
     } else {
-      drawCard = getRandomCardWeightedByLastCard(roomName, player, lastCard, roomData.randomFactor);
+      drawCard = getRandomCardWeightedByLastCard(roomName, player, lastCard, roomData.randomFactor, false);
     }
 
     myData.cards.push(drawCard);
@@ -479,7 +498,7 @@ io.on("connection", (socket) => {
     
     const playerCards    = myData.cards;
     playerCards[playerCards.length - 1] = null;
-    const drawCard       = getRandomCard(roomName, player);
+    const drawCard       = getRandomCard(roomName, player, false);
 
     myData.rerolls--;
     playerCards[playerCards.length - 1] = drawCard;
@@ -531,7 +550,25 @@ io.on("connection", (socket) => {
     for (const card of cards){
       ydkFile += "\n" + card;
     }
-    ydkFile += "\n!extra\n!side";
+    ydkFile += "\n#extra\n";
+    for (let i = 0; i < 15; i++){
+      const lastCard = myData.cards[myData.cards.length - 1];
+      const drawCard = getRandomCardWeightedByLastCard(roomName, player, lastCard, roomData.randomFactor, true);
+      myData.cards.push(drawCard);
+      ydkFile += drawCard + "\n";
+    }
+    ydkFile += "!side";
+    let lastCard = myData.cards[roomData.totalCards - 1];
+    for (const cardType of cardTypes){
+      const dataCardType = cleanCardType(cardType, "");
+      myData[dataCardType + "Allowed"] += 15;
+    }
+    for (let i = 0; i < 15; i++){
+      const drawCard = getRandomCardWeightedByLastCard(roomName, player, lastCard, roomData.randomFactor, false);
+      myData.cards.push(drawCard);
+      ydkFile += "\n" + drawCard;
+      lastCard = myData.cards[myData.cards.length - 1];
+    }
 
     io.to(roomName).emit("download", player, ydkFile);
   });

@@ -50,7 +50,7 @@
       const roomNameLength   = 4;
       let numRerolls         = 5;
       const listNames        = ["card", "ban", "set"]; //names used to get all dropdown information
-      const cardTypes        = ["spells", "traps", "monsters"];
+      const cardTypes        = ["Spells", "Traps", "Normal Monsters", "Effect Monsters"];
       const dropDowns        = {}; //holder for the three drop down elements, since they're so similar in name
       const cardTypeElements = {};
       let myRole             = "";
@@ -69,6 +69,9 @@
       let myDrawButton;
       let myRerollButton;
 
+      /**
+       * Make the game lobby for other player(s) to join
+       */
       function makeRoom(){
         const roomHolder  = document.getElementById("rooms");
         const elementList = roomHolder.getElementsByTagName("li");
@@ -102,9 +105,15 @@
         }
       }
 
+      function cleanCardType(cardType, replace){
+        return cardType.toLowerCase().replace(" ", replace);
+      }
+
+      /**
+       * Create all of the HTML components (dropdowns, textboxes, buttons) for the player
+       * @param  {String} player "player1", "player2", or "viewer", the player that is creating the components
+       */
       function makeMyComponents(player){
-        //player: String, "player1" or "player2"
-        //this is used to generate the buttons/textboxs/dropdowns for each player
 
         if (player === "viewer"){
           return;
@@ -145,23 +154,24 @@
           }
 
           for (const cardType of cardTypes){
-            const capitalCardType = cardType.charAt(0).toUpperCase() + cardType.slice(1);
+            const componentCardType  = cleanCardType(cardType, "-");
+            const labelCardType = cardType;
 
             const cardTypeLabel               = document.createElement("label");
-                  cardTypeLabel.htmlFor       = cardType + "-count";
-                  cardTypeLabel.id            = cardType + "-count-label";
+                  cardTypeLabel.htmlFor       = componentCardType + "-count";
+                  cardTypeLabel.id            = componentCardType + "-count-label";
                   cardTypeLabel.style.display = "flex";
-                  cardTypeLabel.innerHTML     = capitalCardType + " Count";
+                  cardTypeLabel.innerHTML     = labelCardType + " Count";
 
             const cardTypeTextBox                       = document.createElement("input");
-                  cardTypeTextBox.id                    = cardType + "-count";
-                  cardTypeTextBox.name                  = cardType + "-count";
+                  cardTypeTextBox.id                    = componentCardType + "-count";
+                  cardTypeTextBox.name                  = componentCardType + "-count";
                   cardTypeTextBox.style.display         = "flex";
                   cardTypeTextBox.type                  = "text"; //super neat fun fact, firefox doesn't care if you type non-numbers into here, just need to check in function
                   cardTypeTextBox.style.backgroundColor = "white";
                   cardTypeTextBox.onkeyup               = getExpectedDeckSize;
                   cardTypeTextBox.onpaste               = getExpectedDeckSize;
-                  cardTypeElements[cardType]            = cardTypeTextBox;
+                  cardTypeElements[componentCardType]   = cardTypeTextBox;
 
             myReadySide.appendChild(cardTypeLabel);
             myReadySide.appendChild(cardTypeTextBox);
@@ -215,7 +225,11 @@
         myPlaySide.appendChild(myDrawButton);
         myPlaySide.appendChild(myRerollButton);
       }
-
+      /**
+       * Generate the tool tip text for an ability
+       * @param  {Object} abilityData Contains all of the information about the ability, used to make the text
+       * @return {String}             The tool tip text
+       */
       function makeToolTipText(abilityData){
         let   toolText       = abilityData.description + "<br />Me<br />";
         const targetMe       = abilityData.targetMe;
@@ -233,6 +247,13 @@
         return toolText;
       }
 
+      /**
+       * Create the div that acts as a button to activate an ability
+       * @param {String} abilityName Name of the ability
+       * @param {Object} abilityData All the data about the ability
+       * @param {Number} row         Which row to stick the component in (grid layout)
+       * @param {Number} col         Which column to stick the component in (grid layout)
+       */
       function makeAbilityComponent(abilityName, abilityData, row, col){
         const newAbility = document.createElement("div");
               newAbility.className             = "ability-tooltip";
@@ -254,7 +275,10 @@
         newAbility.appendChild(newAbilityToolTip);
         
       }
-
+      /**
+       * Make all of the ability components
+       * @param {Object} abilitiesData All the data about the abilities
+       */
       function makeAbilities(abilitiesData){
         let   rowIndex  = 1;
         let   colIndex  = 1;
@@ -317,7 +341,8 @@
       function getExpectedDeckSize(){
         let totalCount = 0;
         for (const cardType of cardTypes){
-          const textBox = document.getElementById(cardType + "-count");
+          const componentCardType = cleanCardType(cardType, "-");
+          const textBox = document.getElementById(componentCardType + "-count");
           const value   = textBox.value;
 
           totalCount += Math.floor(value);
@@ -371,13 +396,14 @@
         }
 
         for (const cardType of cardTypes){
-          let value = cardTypeElements[cardType].value;
+          const componentCardType = cleanCardType(cardType, "-");
+          let value = cardTypeElements[componentCardType].value;
           value = value === "" ? 0 : value;
-          data[cardType + "-textbox"] = Math.floor(value);
+          data[componentCardType + "-textbox"] = Math.floor(value);
         }
 
         data.randomFactor = document.getElementById("randomFactor").value;
-
+        console.log(data);
         socket.emit("start-game", myRoomName, data);
         myDrawButton.style.display   = "flex";
         myRerollButton.style.display = "flex";
