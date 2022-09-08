@@ -8,32 +8,14 @@ const fs = require("fs");
 
 app.use(express.static(__dirname));
 
-const rooms = {};
-const cardTypes = ["Spells", "Traps", "Normal Monsters", "Effect Monsters"];
-
-let cardData = fs.readFileSync("./public/cards/cardData.json");
-cardData = JSON.parse(cardData);
-
-const cardListFiles = fs.readdirSync("./public/cardLists/");
-const cardListNames = cardListFiles.map((x) => {
-  return x.replace(".txt", "");
-});
-
-const banListFiles = fs.readdirSync("./public/banLists/");
-const banListNames = banListFiles.map((x) => {
-  return x.replace(".json", "");
-});
-
-const setListFiles = fs.readdirSync("./public/setLists/");
-const setListNames = setListFiles.map((x) => {
-  return x.replace(".json", "");
-});
-
-let mainDeckConnections = fs.readFileSync("./public/connections/mainDeck-connections.json");
-mainDeckConnections = JSON.parse(mainDeckConnections);
-
-let totalUsages = fs.readFileSync("./public/connections/totalUsages.json");
-totalUsages = JSON.parse(totalUsages);
+const rooms               = {};
+const cardTypes           = ["Spells", "Traps", "Normal Monsters", "Effect Monsters"];
+const cardData            = JSON.parse(fs.readFileSync("./public/cards/cardData.json"));
+const cardListNames       = fs.readdirSync("./public/cardLists/").map((x) => {return x.replace(".txt", "");});
+const banListNames        = fs.readdirSync("./public/banLists/").map((x) => {return x.replace(".json", "");});
+const setListNames        = fs.readdirSync("./public/setLists/").map((x) => {return x.replace(".json", "");});
+const mainDeckConnections = JSON.parse(fs.readFileSync("./public/connections/mainDeck-connections.json"));
+const totalUsages         = JSON.parse(fs.readFileSync("./public/connections/totalUsages.json"));
 
 const abilities = {
   get: () => {
@@ -105,9 +87,8 @@ function checkIfCardTypeValid(roomName, player, cardId, extraDeckAllowed){
   const cardTypeUsed    = playerData[cardType + "sUsed"];
 
   if (extraDeck != extraDeckAllowed) return false;
-  if (extraDeckAllowed){ //if this is for the extra deck (line above is true), then this should just return true since user isn't putting in any data for extra deck monsters
-    return true;
-  }
+  if (extraDeckAllowed) return true;//if this is for the extra deck (line above is true), then this should just return true since user isn't putting in any data for extra deck monsters
+
   if (cardTypeAllowed - cardTypeUsed < 0){
     roomData.logText += "\nERROR: " + cardData[cardId].name + " appears too many times in " + player + "'s deck";
   }
@@ -132,21 +113,17 @@ function getRandomCardWeighted(roomName, player, data, randomFactor, extraDeckAl
   const weights  = {};
   const roomData = rooms[roomName];
 
-  //add cards from given data set if they're in the card list, and the player can add it
-  for (const [id, value] of Object.entries(data)){
-    if (roomData.cardIds.includes(id) && checkIfCardValid(roomName, player, id, extraDeckAllowed)){ //if undefined, this is also false
-      weights[id] = value;
-    }
-  }
-
-  //add cards if they're in the card list, not in the current weight object, and player can still add it
+  //add cards if they're in the card list, and player can still add it
   for (const id of roomData.cardIds){
-    if (weights[id] === undefined && checkIfCardValid(roomName, player, id, extraDeckAllowed)){ //if undefined, this is also false
+    if (!checkIfCardValid(roomName, player, id, extraDeckAllowed)) continue;
+    if (data[id] !== undefined){
+      weights[id] = data[id];
+    } else {
       weights[id] = 1;
     }
   }
 
-  //set each weight to 1 (randomFactor = 1) to itself (randomFactor = 0)
+  //set each weight from 1 (randomFactor = 1) to itself (randomFactor = 0)
   let totalWeight = 0;
   for (const [id, value] of Object.entries(weights)){
     const divisor = (1 + randomFactor * (parseFloat(value) - 1));
@@ -162,16 +139,11 @@ function getRandomCardWeighted(roomName, player, data, randomFactor, extraDeckAl
   const randomValue = Math.random();
   let countValue    = 0;
   let lastId        = "300302042"; //this a random skill card, forever log showed fallbackData not being set
-                                   //I imagine it is because there was nothing in weights
 
   for (const [id, value] of Object.entries(weights)){
     countValue += value; 
     lastId = id;
-    if (randomValue <= countValue){
-      const data     = cardData[id];
-
-      return id;
-    }
+    if (randomValue <= countValue) return id;
   }
   roomData.logText += "\nFall back data had to be used";
   roomData.logText += "\nRoom:         " + roomName;
@@ -202,6 +174,7 @@ function getRandomCardWeightedByLastCard(roomName, player, lastCard, randomFacto
     rooms[roomName].logText += "\n" + player + " has no connections to last card (" + cardData[lastCard].name + "), going weighted by total";
     return getRandomCardWeightedByTotalCount(roomName, player, randomFactor, extraDeckAllowed);
   }
+
   rooms[roomName].logText += "\n" + player + " has connection to last card (" + cardData[lastCard].name + "), going weighted by last card";
   return getRandomCardWeighted(roomName, player, connectionsToLastCard, randomFactor, extraDeckAllowed);
 }
@@ -220,13 +193,13 @@ function getAbilityStatus(roomName){
 
   for (const player in abilityStatus){
     const playerData = roomData[ids[player]];
-    const abilities = playerData.abilities;
+    const abilities  = playerData.abilities;
     for (const ability in abilities){
       const abilityId = abilities[ability].id;
-      let canUse = player === roomData.currentPlayer; //if not current player, can't use abilities
-          canUse = canUse && playerData.turnsBeforeUseAbility <= 0; //still turns to go before able to use ability
-          canUse = canUse && abilities[ability].count() > 0; //ability has ran out of uses
-          canUse = canUse && (playerData.rerolls + abilities[ability].targetMe.rerolls) >= 0; //after using ability, user will not have negative rerolls
+      const canUse    = player === roomData.currentPlayer && //if not current player, can't use abilities
+                        playerData.turnsBeforeUseAbility <= 0 && //still turns to go before able to use ability
+                        abilities[ability].count() > 0 && //ability has ran out of uses
+                       (playerData.rerolls + abilities[ability].targetMe.rerolls) >= 0; //after using ability, user will not have negative rerolls
 
       abilityStatus[player][abilityId] = canUse;
     }
@@ -298,10 +271,10 @@ function emitPlayerDataChanges(roomName){
 }
 
 function cardsLeft(roomName, player, cardId){
-  const roomData   = rooms[roomName];
-  const myData     = roomData[roomData[player]];
-  let   cardsLeft  = roomData.banList[cardId] === undefined ? 3 : roomData.banList[cardId];
-  let   cardsUsed  = 0;
+  const roomData     = rooms[roomName];
+  const myData       = roomData[roomData[player]];
+  const cardsAllowed = roomData.banList[cardId] === undefined ? 3 : roomData.banList[cardId];
+  let   cardsUsed    = 0;
 
   for (let i = 0; i < myData.cards.length; i++){
     if (myData.cards[i] === cardId){
@@ -309,13 +282,11 @@ function cardsLeft(roomName, player, cardId){
     }
   }
 
-  cardsLeft -= cardsUsed;
-
-  if (cardsLeft < 0){
-    roomData.logText += "\nERROR: " + cardId + " has " + Math.abs(cardsLeft) + " too many cards";
+  if (cardsAllowed - cardsUsed < 0){
+    roomData.logText += "\nERROR: " + cardId + " has " + Math.abs(cardsAllowed) + " too many cards";
   }
 
-  return cardsLeft;
+  return cardsAllowed - cardsUsed;
 }
 
 function updateCardTypeCounts(roomName){
@@ -341,6 +312,71 @@ function updateCardTypeCounts(roomName){
       playerData[cardType + "sUsed"]++;
     }
   }
+}
+
+function getNextCard(roomName, player){
+  const roomData = rooms[roomName];
+  const myData   = roomData[roomData[player]];
+  const lastCard = myData.cards[myData.cards.length - 1];
+  let drawCard;
+  
+  if (myData.nextCardGained === "same" && checkIfCardValid(roomName, player, lastCard, false)){
+    
+    drawCard = lastCard;
+
+  } else if (myData.nextCardGained === "opponentSame"){
+
+    const opponentData     = roomData[myData.opponentId]; 
+    const opponentLastCard = opponentData.cards[opponentData.cards.length - 2]; // -2 since the opponent will have drawn a card since then
+    
+    if (checkIfCardValid(roomName, player, opponentLastCard, false)){
+    
+      drawCard = opponentLastCard;
+    
+    } else {
+
+      drawCard = getRandomCard(roomName, player, false);
+
+    }
+  } else {
+    drawCard = getRandomCardWeightedByLastCard(roomName, player, lastCard, roomData.randomFactor, false);
+  }
+
+  return drawCard;
+}
+
+function updateStatsAfterCardDraw(roomName, player){
+  const myData = rooms[roomName][rooms[roomName][player]];
+
+  myData.nextCardGained          = null;
+  myData.turnsBeforeRerollGained = Math.max(--myData.turnsBeforeRerollGained, 0);
+  myData.turnsBeforeUseAbility   = Math.max(--myData.turnsBeforeUseAbility, 0);
+  myData.turnsBeforeUseReroll    = Math.max(--myData.turnsBeforeUseReroll, 0);
+  
+  if (myData.turnsBeforeRerollGained <= 0){
+    myData.rerolls += myData.rerollsPerGain;
+    myData.turnsBeforeRerollGained = myData.totalTurnsBeforeRerollGained;
+  }
+
+  roomData.currentPlayer = player === "player1" ? "player2" : "player1";
+
+  roomData.totalCards++;
+}
+
+function rerollCard(roomName, player, cardToReroll){
+  const roomData    = rooms[roomName];
+  const playerData  = rooms[roomData[player]];
+  const playerCards = playerData.cards;
+
+  if (cardToReroll === -1){
+    cardToReroll = Math.random() * (playerCards.length - 1);
+  }
+
+  playerCards[cardToReroll] = null;
+
+  const drawCard = getRandomCard(roomName, player, false);
+
+  playerCards[cardToReroll] = drawCard;
 }
 
 app.get("/", (req, res) => {
@@ -437,52 +473,16 @@ io.on("connection", (socket) => {
 
   socket.on("draw-card", (roomName, player) => {
     //drawing a card is what switches the currentPlayer
-    const roomData = rooms[roomName];
-    const myData   = roomData[roomData[player]];
-    const lastCard = myData.cards[myData.cards.length - 1];
-    let drawCard;
+    const drawCard = getNextCard(roomName, player);
     
-    if (myData.nextCardGained === "same" && checkIfCardValid(roomName, player, lastCard, false)){
-      
-      drawCard = lastCard;
-
-    } else if (myData.nextCardGained === "opponentSame"){
-
-      const opponentData     = roomData[myData.opponentId]; 
-      const opponentLastCard = opponentData.cards[opponentData.cards.length - 2]; // -2 since the opponent will have drawn a card since then
-      
-      if (checkIfCardValid(roomName, player, opponentLastCard, false)){
-      
-        drawCard = opponentLastCard;
-      
-      } else {
-
-        drawCard = getRandomCard(roomName, player, false);
-
-      }
-    } else {
-      drawCard = getRandomCardWeightedByLastCard(roomName, player, lastCard, roomData.randomFactor, false);
-    }
-
     myData.cards.push(drawCard);
+    updateStatsAfterCardDraw(roomName, player);
 
-    myData.nextCardGained          = null;
-    myData.turnsBeforeRerollGained = Math.max(--myData.turnsBeforeRerollGained, 0);
-    myData.turnsBeforeUseAbility   = Math.max(--myData.turnsBeforeUseAbility, 0);
-    myData.turnsBeforeUseReroll    = Math.max(--myData.turnsBeforeUseReroll, 0);
-    
-    if (myData.turnsBeforeRerollGained <= 0){
-      myData.rerolls += myData.rerollsPerGain;
-      myData.turnsBeforeRerollGained = myData.totalTurnsBeforeRerollGained;
-    }
-
-    roomData.currentPlayer = player === "player1" ? "player2" : "player1";
-
-    roomData.totalCards++;
     if (roomData.totalCards >= roomData.totalCardsAllowed){
       io.to(roomName).emit("end-game");
       return;
     }
+
     updateCardTypeCounts(roomName);
     emitPlayerDataChanges(roomName);
     io.to(roomName).emit("draw-card", player, drawCard);
@@ -495,13 +495,9 @@ io.on("connection", (socket) => {
     if (myData.rerolls <= 0 || myData.turnsBeforeUseReroll > 0 || myData.cards.length == 0){
       return;
     }
-    
-    const playerCards    = myData.cards;
-    playerCards[playerCards.length - 1] = null;
-    const drawCard       = getRandomCard(roomName, player, false);
 
+    rerollCard(roomName, player, myData.cards.length - 1);
     myData.rerolls--;
-    playerCards[playerCards.length - 1] = drawCard;
     updateCardTypeCounts(roomName);
     emitPlayerDataChanges(roomName);
     io.to(roomName).emit("reroll", drawCard, player);
