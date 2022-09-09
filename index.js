@@ -31,7 +31,8 @@ const abilities = {
       
       targetOpponent: {
         rerolls: 3
-      }
+      },
+      canUse: true
     },
 
     "Another, Please!" : {
@@ -42,7 +43,8 @@ const abilities = {
         nextCardGained: "same",
         rerolls: -1,
         turnsBeforeUseAbility: 1
-      }
+      },
+      canUse: true
     },
 
     "They'll Have What I'm Having" : {
@@ -56,27 +58,51 @@ const abilities = {
       }, 
       targetOpponent: {
         nextCardGained: "opponentSame"
-      }
+      },
+      canUse: true
     },
 
     "Russian Roulette" : {
       count: () => {return 2},
       id: "russian-roulette",
-      description: "Gain some rerolls, but at what cost?",
+      description: "You're in a bind, you'll gain some rerolls, but at what cost?",
+      function: (roomName, player) => {
+        const roomData      = rooms[roomName];
+        const myData        = roomData[roomData[player]];
+        const indexToReroll = Math.round(Math.random() * (myData.cards.length - 1));
+        const rerollData = rerollCard(roomName, player, indexToReroll);
+        io.to(roomName).emit("reroll", rerollData.drawCard, rerollData.cardToReroll, player);
+      },
       targetMe: {
         rerolls: +2,
-        turnsBeforeUseAbility: 1,
-        function: (roomName, player) => {
-          const roomData      = rooms[roomName];
-          const myData        = roomData[roomData[player]];
-          const indexToReroll = Math.round(Math.random() * (myData.cards.length - 1));
-          const rerollData = rerollCard(roomName, player, indexToReroll);
-          io.to(roomName).emit("reroll", rerollData.drawCard, rerollData.cardToReroll, player);
-        }
+        turnsBeforeUseAbility: 1
       }, 
       targetOpponent: {
 
-      }
+      },
+      canUse: true
+    },
+    "Long Term Success" : {
+      count: () => {return 2},
+      id: "long-term",
+      description: "I knew intro to business would pay off! Pay 3 rerolls now, get 6 back in 5 turns",
+      function: (roomName, player) => {
+        const roomData = rooms[roomName];
+        const myData   = roomData[roomData[player]];
+
+        myData.rerolls += 6;
+
+      }, 
+      functionDelay: 5,
+      turnsUntilFunction: 5,
+      currentlyActive: false,
+      targetMe : {
+        rerolls: -3
+      },
+      targetOpponent: {
+
+      },
+      canUse: true
     }
   }}
 }
@@ -219,9 +245,10 @@ function getAbilityStatus(roomName){
       const canUse    = player === roomData.currentPlayer && //if not current player, can't use abilities
                         playerData.turnsBeforeUseAbility <= 0 && //still turns to go before able to use ability
                         abilities[ability].count() > 0 && //ability has ran out of uses
-                       (playerData.rerolls + abilities[ability].targetMe.rerolls) >= 0; //after using ability, user will not have negative rerolls
-
+                       (playerData.rerolls + abilities[ability].targetMe.rerolls) >= 0 && //after using ability, user will not have negative rerolls
+                        !abilities[ability].currentlyActive;
       abilityStatus[player][abilityId] = canUse;
+      abilities[ability].canUse = canUse;
     }
   }
   return abilityStatus;
@@ -373,6 +400,18 @@ function updateStatsAfterCardDraw(roomName, player){
   myData.turnsBeforeRerollGained = Math.max(--myData.turnsBeforeRerollGained, 0);
   myData.turnsBeforeUseAbility   = Math.max(--myData.turnsBeforeUseAbility, 0);
   myData.turnsBeforeUseReroll    = Math.max(--myData.turnsBeforeUseReroll, 0);
+
+  for (const abilityName in myData.abilities) {
+    const ability = myData.abilities[abilityName];
+    if (ability.functionDelay && ability.currentlyActive){
+      ability.turnsUntilFunction--;
+      if (ability.turnsUntilFunction === 0){
+        ability.turnsUntilFunction = ability.functionDelay;
+        ability.currentlyActive = false;
+        ability.function(roomName, player);
+      }
+    }
+  }
   
   if (myData.turnsBeforeRerollGained <= 0){
     myData.rerolls += myData.rerollsPerGain;
@@ -530,7 +569,7 @@ io.on("connection", (socket) => {
     const roomData  = rooms[roomName];
     const myData    = roomData[roomData[player]];
 
-    if (myData.turnsBeforeUseAbility > 0 || player != roomData.currentPlayer){
+    if (myData.turnsBeforeUseAbility > 0 || player != roomData.currentPlayer || !myData.abilities[abilityName].canUse){
       return;
     }
 
@@ -556,11 +595,12 @@ io.on("connection", (socket) => {
         opponentData[trait] = value;
       }
     }
-    if (targetMe.function !== undefined){
-      targetMe.function(roomName, player);
-    }
-    if (targetOpponent.function !== undefined){
-      targetOpponent.function(roomName, player);
+    if (ability.function){
+      if (ability.functionDelay){
+        ability.currentlyActive = true;
+      } else {
+        ability.function(roomName, player);
+      }
     }
 
     updateCardTypeCounts(roomName);
