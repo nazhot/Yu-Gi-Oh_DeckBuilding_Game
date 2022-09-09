@@ -541,7 +541,7 @@
         setDrawnCard(playerSide, newCardPath, cardId);
       });
 
-      socket.on("reroll", (newCardId, player) => {
+      socket.on("reroll", (newCardId, newCardPosition, player) => {
         const playerSide = document.getElementById(player + "-card-container");
         const showCard = (myRole === "viewer" || myRole === player);
 
@@ -549,9 +549,9 @@
           return;
         }
 
-        const lastCard     = playerSide.lastChild;
-              lastCard.src = imageApiPath + newCardId + ".jpg";
-              lastCard.alt = newCardId;
+        const rerolledCard     = playerSide.children[newCardPosition];
+              rerolledCard.src = imageApiPath + newCardId + ".jpg";
+              rerolledCard.alt = newCardId;
       });
 
       socket.on("data-change", (player1Rerolls, player2Rerolls, abilityStatus) => {

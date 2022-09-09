@@ -57,6 +57,26 @@ const abilities = {
       targetOpponent: {
         nextCardGained: "opponentSame"
       }
+    },
+
+    "Russian Roulette" : {
+      count: () => {return 2},
+      id: "russian-roulette",
+      description: "Gain some rerolls, but at what cost?",
+      targetMe: {
+        rerolls: +2,
+        turnsBeforeUseAbility: 1,
+        function: (roomName, player) => {
+          const roomData      = rooms[roomName];
+          const myData        = roomData[roomData[player]];
+          const indexToReroll = Math.round(Math.random() * (myData.cards.length - 1));
+          const rerollData = rerollCard(roomName, player, indexToReroll);
+          io.to(roomName).emit("reroll", rerollData.drawCard, rerollData.cardToReroll, player);
+        }
+      }, 
+      targetOpponent: {
+
+      }
     }
   }}
 }
@@ -346,7 +366,8 @@ function getNextCard(roomName, player){
 }
 
 function updateStatsAfterCardDraw(roomName, player){
-  const myData = rooms[roomName][rooms[roomName][player]];
+  const roomData = rooms[roomName];
+  const myData   = roomData[roomData[player]];
 
   myData.nextCardGained          = null;
   myData.turnsBeforeRerollGained = Math.max(--myData.turnsBeforeRerollGained, 0);
@@ -365,11 +386,11 @@ function updateStatsAfterCardDraw(roomName, player){
 
 function rerollCard(roomName, player, cardToReroll){
   const roomData    = rooms[roomName];
-  const playerData  = rooms[roomData[player]];
+  const playerData  = roomData[roomData[player]];
   const playerCards = playerData.cards;
 
   if (cardToReroll === -1){
-    cardToReroll = Math.random() * (playerCards.length - 1);
+    cardToReroll = Math.round(Math.random() * (playerCards.length - 1));
   }
 
   playerCards[cardToReroll] = null;
@@ -377,6 +398,10 @@ function rerollCard(roomName, player, cardToReroll){
   const drawCard = getRandomCard(roomName, player, false);
 
   playerCards[cardToReroll] = drawCard;
+  updateCardTypeCounts(roomName);
+  emitPlayerDataChanges(roomName);
+  io.to(roomName).emit("reroll", drawCard, cardToReroll, player);
+  return {drawCard, cardToReroll};
 }
 
 app.get("/", (req, res) => {
@@ -473,6 +498,8 @@ io.on("connection", (socket) => {
 
   socket.on("draw-card", (roomName, player) => {
     //drawing a card is what switches the currentPlayer
+    const roomData = rooms[roomName];
+    const myData   = roomData[roomData[player]];
     const drawCard = getNextCard(roomName, player);
     
     myData.cards.push(drawCard);
@@ -495,12 +522,8 @@ io.on("connection", (socket) => {
     if (myData.rerolls <= 0 || myData.turnsBeforeUseReroll > 0 || myData.cards.length == 0){
       return;
     }
-
-    rerollCard(roomName, player, myData.cards.length - 1);
     myData.rerolls--;
-    updateCardTypeCounts(roomName);
-    emitPlayerDataChanges(roomName);
-    io.to(roomName).emit("reroll", drawCard, player);
+    rerollCard(roomName, player, myData.cards.length - 1);
   });
 
   socket.on("ability", (roomName, abilityName, player) => {
@@ -520,7 +543,7 @@ io.on("connection", (socket) => {
       const value = targetMe[trait];
       if (typeof value === "number"){
         myData[trait] += value;
-      } else {
+      } else if (typeof value === "string"){
         myData[trait] = value;
       }
     }
@@ -529,10 +552,17 @@ io.on("connection", (socket) => {
       const value = targetOpponent[trait];
       if (typeof value === "number"){
         opponentData[trait] += value;
-      } else {
+      } else if (typeof value === "string"){
         opponentData[trait] = value;
       }
     }
+    if (targetMe.function !== undefined){
+      targetMe.function(roomName, player);
+    }
+    if (targetOpponent.function !== undefined){
+      targetOpponent.function(roomName, player);
+    }
+
     updateCardTypeCounts(roomName);
     emitPlayerDataChanges(roomName);
   });
