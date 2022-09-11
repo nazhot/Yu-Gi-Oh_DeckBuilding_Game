@@ -12,13 +12,16 @@ html {
   top: 0;
 }
 
+#playing-screen {
+  background-color: #f8f8ff !important;
+}
+
 #player1-side {
   text-align: center;
 }
 
 #player1-play-side {
-width: 35vw;
-  background-color: coral;
+  width: 35vw;
   text-align: center;
 }
 
@@ -38,7 +41,6 @@ width: 35vw;
 #player2-play-side {
   width: 35vw;
   left: 65vw;
-  background-color: magenta;
   text-align: center;
 }
 
@@ -48,8 +50,7 @@ width: 35vw;
     width: 30vw;
     height: 70vh;
     left: 35vw;
-    top: 0;
-    background-color:burlywood;
+    top: 5vh;
 }
 
 #middle-card{
@@ -74,7 +75,7 @@ width: 35vw;
 }
 
 .draw-card-button {
-  background-color: gray;
+  background-color: #bc5a84;
   border-radius: 10px;
   width: 50%;
   height: 6vh;
@@ -85,7 +86,7 @@ width: 35vw;
 }
 
 .reroll-card-button {
-  background-color: gray;
+  background-color: #bc5a84;
   border-radius: 10px;
   width: 50%;
   height: 6vh;
@@ -102,12 +103,18 @@ width: 35vw;
 
 #player1-card-container{
   left: 0;
-  background-color: aquamarine;
 }
 
 #player2-card-container{
   left: 65vw;
-  background-color: brown;
+}
+
+#my-card-data{
+  position: fixed;
+  width: 30vw;
+  text-align: center;
+  height: 7vh;
+  top: 0;
 }
 
 #abilities-container{
@@ -117,17 +124,17 @@ width: 35vw;
   grid-template-rows: 1fr 1fr;
   gap: 2% 2%;
   width: 30vw;
-  height: 30vh;
+  height: 23vh;
   bottom: 0;
   left: 35vw;
   bottom: 0;
-  background-color: forestgreen;
 }
 
 .ability-tooltip {
   position: relative;
   display: inline-block;
-  border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+  border-bottom: 1px dotted black;
+  text-align: center;
 }
 
 /* Tooltip text */

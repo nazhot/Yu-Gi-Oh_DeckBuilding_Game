@@ -37,6 +37,7 @@
       </div>
       <div id="card-and-powerups">
         <img src="/public/images/back.png" id="middle-card" />
+        <span id="my-card-data"></span>
         <div id="abilities-container">
         </div>
       </div>
@@ -258,7 +259,7 @@
         const newAbility = document.createElement("div");
               newAbility.className             = "ability-tooltip";
               newAbility.id                    = abilityData.id + "-ability"
-              newAbility.style.backgroundColor = "orange";
+              newAbility.style.backgroundColor = "#a086b7";
               newAbility.innerHTML             = abilityName;
               newAbility.style.gridRow         = row + " / span 1";
               newAbility.style.gridColumn      = col + " / span 1";
@@ -557,6 +558,12 @@
       socket.on("data-change", (player1Rerolls, player2Rerolls, abilityStatus) => {
         setRerollText(myRole === "player1" ? player1Rerolls : player2Rerolls);
         setAbilityStatus(abilityStatus);
+      });
+
+      socket.on("card-type-data", (player, data) => {
+        if (myRole === player){
+          document.getElementById("my-card-data").innerHTML = data;
+        }
       });
 
       socket.on("end-game", () => {

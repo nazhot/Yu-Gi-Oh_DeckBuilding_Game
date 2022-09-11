@@ -443,6 +443,20 @@ function rerollCard(roomName, player, cardToReroll){
   return {drawCard, cardToReroll};
 }
 
+function emitCardTypeData(roomName, player){
+  const roomData = rooms[roomName];
+  const myData   = roomData[roomData[player]];
+  let data = "";
+  for (const cardType of cardTypes){
+    const propCardType = cleanCardType(cardType, "");
+    if (data !== ""){
+      data += " ";
+    }
+    data += cardType + ": " + myData[propCardType + "Used"] + "/"+ myData[propCardType + "Allowed"];
+  }
+  io.to(roomName).emit("card-type-data", player, data);
+}
+
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/index.html");
 });
@@ -510,12 +524,15 @@ io.on("connection", (socket) => {
     for (const cardType of cardTypes){
       const componentCardType = cleanCardType(cardType, "-");
       const propCardType      = cleanCardType(cardType, "");
-      const dataName = componentCardType + "-textbox";
-      const propertyName = propCardType + "Allowed";
-      roomData[player1Id][propertyName] = data[dataName];
-      roomData[player2Id][propertyName] = data[dataName];
+      const dataName          = componentCardType + "-textbox";
+      const allowedPropName   = propCardType + "Allowed";
+      const usedPropName      = propCardType + "Used";
+      roomData[player1Id][allowedPropName] = data[dataName];
+      roomData[player2Id][allowedPropName] = data[dataName];
+      roomData[player1Id][usedPropName] = 0;
+      roomData[player2Id][usedPropName] = 0;
       totalCardsAllowed += data[dataName];
-      roomData.logText += "\n" + propertyName + ": " + data[dataName];
+      roomData.logText += "\n" + allowedPropName + ": " + data[dataName];
     }
 
     roomData.logText += "\nRandom Factor:      " + randomFactor;
@@ -532,6 +549,8 @@ io.on("connection", (socket) => {
 
     io.to(roomName).emit("start-game", roomData[player1Id].abilities);
     emitPlayerDataChanges(roomName);
+    emitCardTypeData(roomName, "player1");
+    emitCardTypeData(roomName, "player2");
     roomData.currentPlayer = "player1";
   });
 
@@ -551,6 +570,7 @@ io.on("connection", (socket) => {
 
     updateCardTypeCounts(roomName);
     emitPlayerDataChanges(roomName);
+    emitCardTypeData(roomName, player)
     io.to(roomName).emit("draw-card", player, drawCard);
   });
 
@@ -563,6 +583,7 @@ io.on("connection", (socket) => {
     }
     myData.rerolls--;
     rerollCard(roomName, player, myData.cards.length - 1);
+    emitCardTypeData(roomName, player);
   });
 
   socket.on("ability", (roomName, abilityName, player) => {
@@ -605,6 +626,7 @@ io.on("connection", (socket) => {
 
     updateCardTypeCounts(roomName);
     emitPlayerDataChanges(roomName);
+    emitCardTypeData(roomName, player);
   });
 
   socket.on("download", (roomName, player) =>{
