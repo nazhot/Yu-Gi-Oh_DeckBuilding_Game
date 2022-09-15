@@ -1,0 +1,64 @@
+#playing-screen {
+    height: 100vh;
+    width: 100vw;
+    display: grid;
+    grid-template-areas: 'info deck card'
+                         'nav nav nav';
+    grid-template-columns: 1fr 4fr 1fr;
+    grid-template-rows: 9fr 1fr;
+    row-gap: .4%;
+    column-gap: .2%;
+}
+
+.playing-panel {
+    border-style: solid;
+    border-color: black;
+    border-width: 2px;
+    box-shadow: 4px 4px 4px;
+}
+
+#playing-information-panel {
+    grid-area: info;
+}
+
+#playing-deck-panel {
+    grid-area: deck;
+    overflow: auto;
+}
+
+#playing-card-panel {
+    grid-area: card;
+    text-align: center;
+}
+
+#playing-bottom-bar {
+    grid-area: nav;
+    display: grid;
+    grid-template-areas: 'draw reroll . . . download . . . . ability10 ability9 ability8 ability7 ability6 ability5 ability4 ability3 ability2 ability1';
+    grid-template-columns: repeat(20, 1fr);
+    column-gap: .1%;
+    border-style: solid;
+    border-color: black;
+    border-width: 2px;
+}
+
+#player-large-card {
+    width: 75%;
+    margin: 2% auto;
+}
+
+#draw-button {
+    grid-area: draw;
+}
+
+#reroll-button {
+    grid-area: reroll;
+}
+
+.ability-tooltip {
+    display: inline;
+    vertical-align: middle;
+    border: 1px solid black;
+    text-align: center;
+    line-height: 100%;
+}

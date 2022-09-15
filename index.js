@@ -237,6 +237,9 @@ function getAbilityStatus(roomName){
     player2: roomData.player2
   }
 
+  console.log(roomData.status);
+  console.log(!roomData.status === "download")
+
   for (const player in abilityStatus){
     const playerData = roomData[ids[player]];
     const abilities  = playerData.abilities;
@@ -246,7 +249,9 @@ function getAbilityStatus(roomName){
                         playerData.turnsBeforeUseAbility <= 0 && //still turns to go before able to use ability
                         abilities[ability].count() > 0 && //ability has ran out of uses
                        (playerData.rerolls + abilities[ability].targetMe.rerolls) >= 0 && //after using ability, user will not have negative rerolls
-                        !abilities[ability].currentlyActive;
+                        !abilities[ability].currentlyActive &&
+                        !(roomData.status === "download"); //if it's in the download time, both decks full, no abilities
+
       abilityStatus[player][abilityId] = canUse;
       abilities[ability].canUse = canUse;
     }
@@ -280,6 +285,7 @@ function makeRoom(roomName, creatorId, creatorName){
     players:    1,
     viewers:    0,
     totalCards: 0,
+    status:     "waiting",
     player1:    creatorId,
     logText:        "-------------------------------\nLog file for " + roomName + "\n-------------------------------",
     // log:        (text) => {
@@ -519,6 +525,7 @@ io.on("connection", (socket) => {
     roomData.logText += "\nCard list for room: " + cardListName;
     roomData.logText += "\nBan list for room:  " + banListName;
     roomData.logText += "\nSet list for room:  " + setListName;
+    roomData.status  =  "playing";
 
     let totalCardsAllowed = 0;
     for (const cardType of cardTypes){
@@ -562,16 +569,18 @@ io.on("connection", (socket) => {
     
     myData.cards.push(drawCard);
     updateStatsAfterCardDraw(roomName, player);
-
-    if (roomData.totalCards >= roomData.totalCardsAllowed){
-      io.to(roomName).emit("end-game");
-      return;
-    }
-
     updateCardTypeCounts(roomName);
     emitPlayerDataChanges(roomName);
     emitCardTypeData(roomName, player)
     io.to(roomName).emit("draw-card", player, drawCard);
+ 
+    if (roomData.totalCards >= roomData.totalCardsAllowed){
+      roomData.status = "download";
+      io.to(roomName).emit("end-game");
+      return;
+    }
+
+
   });
 
   socket.on("reroll", (roomName, player) => {
@@ -633,11 +642,12 @@ io.on("connection", (socket) => {
     const roomData = rooms[roomName];
     const myData   = roomData[roomData[player]];
     const cards    = myData.cards;
-
+    console.log("making ydk file");
     let ydkFile = "#main";
     for (const card of cards){
       ydkFile += "\n" + card;
     }
+    console.log("made main deck");
     ydkFile += "\n#extra\n";
     for (let i = 0; i < 15; i++){
       const lastCard = myData.cards[myData.cards.length - 1];
@@ -645,6 +655,7 @@ io.on("connection", (socket) => {
       myData.cards.push(drawCard);
       ydkFile += drawCard + "\n";
     }
+    console.log("made extra deck");
     ydkFile += "!side";
     let lastCard = myData.cards[roomData.totalCards - 1];
     for (const cardType of cardTypes){
@@ -657,6 +668,7 @@ io.on("connection", (socket) => {
       ydkFile += "\n" + drawCard;
       lastCard = myData.cards[myData.cards.length - 1];
     }
+    console.log("made side deck");
 
     io.to(roomName).emit("download", player, ydkFile);
   });
@@ -664,15 +676,22 @@ io.on("connection", (socket) => {
   socket.on("disconnecting", () => {
     for (const roomName in rooms){
       if (rooms[roomName][socket.id] != undefined){
-        const isPlayer1 = rooms[roomName][socket.id].role === "player1";
+        const role      = rooms[roomName][socket.id].role ;
+        const isPlayer1 = role  === "player1";
         rooms[roomName].players--;
         delete rooms[roomName][socket.id];
-        if (rooms[roomName].players === 0 || isPlayer1){
+        if (rooms[roomName].players === 0 || isPlayer1 || rooms[roomName].status === "playing"){
           console.log(rooms[roomName].logText);
           io.to(roomName).emit("room-closed");
           delete rooms[roomName];
           emitRooms();
+        } else if (rooms[roomName].status === "waiting"){
+          if (role === "player2"){
+            delete rooms[roomName].player2;
+          }
+          io.to(roomName).emit("opponent-left-lobby");
         }
+      
         
       }
     }

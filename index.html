@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/public/css/style.css" />
+    <link rel="stylesheet" href="/public/css/playing-screen.css" />
   </head>
   <body>
     <div id="room-screen">
@@ -26,7 +27,29 @@
         <p id="player2-connection" style="display: inline-block">NOT READY</p>
       </div>
     </div>
+
     <div id="playing-screen" style="display: none">
+      <div id="playing-information-panel" class="playing-panel">
+        <p id="deck-data"></p>
+        <ul id="playing-log">
+        </ul>
+      </div>
+      <div id="playing-deck-panel" class="playing-panel">
+        <div id="playing-deck-container">
+
+        </div>
+      </div>
+      <div id="playing-card-panel" class="playing-panel">
+        <img src="/public/images/back.png" id="player-large-card" class="large-card"/>
+      </div>
+      <div id="playing-bottom-bar">
+        <button id="draw-button" style="visibility: hidden">Draw Card</button>
+        <button id="reroll-button" style="visibility: hidden;">Reroll (5)</button>
+        <button id="download-button" style="visibility: hidden;">Download</button>
+      </div>
+    </div>
+
+    <div id="viewing-screen" style="display: none">
       <div id="player1-play-side" class="side1">
         <div id="player1-card-container" class="card-container">
         </div>
@@ -36,7 +59,7 @@
         </div>
       </div>
       <div id="card-and-powerups">
-        <img src="/public/images/back.png" id="middle-card" />
+        <img src="/public/images/back.png" id="viewer-large-card" class="large-card" />
         <span id="my-card-data"></span>
         <div id="abilities-container">
         </div>
@@ -58,17 +81,19 @@
       let myRoomName         = "";
       let myUsername         = "";
 
-      const imageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics/"
-      const cardWidth    = "12.5%";
+      const largeImageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics/";
+      const smallImageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics_small/";
+      const cardWidth         = "10%";
   
       const startButton        = document.getElementById("start-game-button");
-      const abilitiesContainer = document.getElementById("abilities-container");
-      const downloadButton     = document.getElementById("download-ydk");
+      const bottomNavBar       = document.getElementById("playing-bottom-bar");
+      const downloadButton     = document.getElementById("download-button");
       const joinRoomForm       = document.getElementById("room-form");
+      const drawButton         = document.getElementById("draw-button");
+      const rerollButton       = document.getElementById("reroll-button");
+      const deckContainer      = document.getElementById("playing-deck-container");
 
       let myReadyButton;
-      let myDrawButton;
-      let myRerollButton;
 
       /**
        * Make the game lobby for other player(s) to join
@@ -134,6 +159,8 @@
         myReadySide.children[1].insertAdjacentElement("afterEnd", myReadyButton);
         
         if (player === "player1"){
+          startButton.style.visibility = "hidden";
+          startButton.style.display    = "block";
           for (let i = 0; i < listNames.length; i++) {
             const listName        = listNames[i]; //card, ban, set
             const capitalListName = listName.charAt(0).toUpperCase() + listName.slice(1);
@@ -172,6 +199,7 @@
                   cardTypeTextBox.style.backgroundColor = "white";
                   cardTypeTextBox.onkeyup               = getExpectedDeckSize;
                   cardTypeTextBox.onpaste               = getExpectedDeckSize;
+                  cardTypeTextBox.value                 = 10;
                   cardTypeElements[componentCardType]   = cardTypeTextBox;
 
             myReadySide.appendChild(cardTypeLabel);
@@ -201,30 +229,16 @@
           socket.emit("getLists", myRoomName);
         }
 
-        const myPlaySide = document.getElementById(player + "-play-side");
-
-        myDrawButton               = document.createElement("button");
-        myDrawButton.id            = player + "-draw-card";
-        myDrawButton.className     = "draw-card-button";
-        myDrawButton.style.display = "none";
-        myDrawButton.innerHTML     = "Draw Card";
-        myDrawButton.addEventListener("click", () => {
+        drawButton.addEventListener("click", () => {
           socket.emit("draw-card", myRoomName, myRole);
-          myDrawButton.style.display   = "none";
-          myRerollButton.style.display = "none";
+          drawButton.style.visibility = "hidden";
+          rerollButton.style.visibility = "hidden";
         });
 
-        myRerollButton               = document.createElement("button");
-        myRerollButton.id            = player + "-reroll-button";
-        myRerollButton.className     = "reroll-card-button";
-        myRerollButton.style.display = "none";
-        setRerollText(numRerolls);
-        myRerollButton.addEventListener("click", () => {
+        rerollButton.addEventListener("click", () => {
           socket.emit("reroll", myRoomName, player);
         });
 
-        myPlaySide.appendChild(myDrawButton);
-        myPlaySide.appendChild(myRerollButton);
       }
       /**
        * Generate the tool tip text for an ability
@@ -255,14 +269,13 @@
        * @param {Number} row         Which row to stick the component in (grid layout)
        * @param {Number} col         Which column to stick the component in (grid layout)
        */
-      function makeAbilityComponent(abilityName, abilityData, row, col){
+      function makeAbilityComponent(abilityName, abilityData, abilityNumber){
         const newAbility = document.createElement("div");
               newAbility.className             = "ability-tooltip";
               newAbility.id                    = abilityData.id + "-ability"
               newAbility.style.backgroundColor = "#a086b7";
               newAbility.innerHTML             = abilityName;
-              newAbility.style.gridRow         = row + " / span 1";
-              newAbility.style.gridColumn      = col + " / span 1";
+              newAbility.style.gridArea        = "ability" + abilityNumber;
               newAbility.addEventListener("click", () => {
                 socket.emit("ability", myRoomName, abilityName, myRole);
               });
@@ -272,7 +285,7 @@
               newAbilityToolTip.className = "ability-tooltip-text";
               newAbilityToolTip.innerHTML = makeToolTipText(abilityData);
 
-        abilitiesContainer.appendChild(newAbility);
+        bottomNavBar.appendChild(newAbility);
         newAbility.appendChild(newAbilityToolTip);
         
       }
@@ -281,18 +294,10 @@
        * @param {Object} abilitiesData All the data about the abilities
        */
       function makeAbilities(abilitiesData){
-        let   rowIndex  = 1;
-        let   colIndex  = 1;
-        const totalRows = 2;
-        const totalCols = 5;
-
+        let abilityNumber = 1;
         for (const abilityName in abilitiesData){
-          makeAbilityComponent(abilityName, abilitiesData[abilityName], rowIndex, colIndex);
-          colIndex++;
-          if (colIndex > totalCols){
-            colIndex = 1;
-            rowIndex++;
-          }
+          makeAbilityComponent(abilityName, abilitiesData[abilityName], abilityNumber);
+          abilityNumber++;
         }
       }
 
@@ -313,24 +318,28 @@
         socket.emit("ready-change", myRoomName, player, myReadyButton.innerHTML);
       }
 
-      function setDrawnCard(playerSide, drawCard, cardId) {
+      function setDrawnCard(playerSide, largeCardImage, cardId) {
         //playerSide: dom element, div that correlates with the users side
         //drawCard:   String,      path to the card image to display
         //samePlayer: boolean,     if the player calling this function is the same one that had drawn the card
         //cardId:     String,      the id of the card, to be stored in the alt of the image, for updating counts on server side if rerolled
         const newCard             = document.createElement("img");
-              newCard.src         = drawCard;
+              newCard.src         = largeCardImage;
               newCard.alt         = cardId;
               newCard.style.width = cardWidth;
         //when moused over, show the image in the middle card
         //when not moused over, default to card back
         newCard.onmouseover = () => {
-          let middleCard = document.getElementById("middle-card");
-          middleCard.src = newCard.src;
+          const largeCards = document.getElementsByClassName("large-card");
+          for (const largeCard of largeCards){
+            largeCard.src = newCard.src;
+          }
         };
         newCard.onmouseleave = () => {
-          let middleCard = document.getElementById("middle-card");
-          middleCard.src = "/public/images/back.png";
+          const largeCards = document.getElementsByClassName("large-card");
+          for (const largeCard of largeCards){
+            largeCard.src = "/public/images/back.png";
+          }
         };
         playerSide.appendChild(newCard);
       }
@@ -358,7 +367,7 @@
       }
 
       function setRerollText(playerRerolls){
-        myRerollButton.innerHTML = "Re-Roll (" + playerRerolls + ")";
+        rerollButton.innerHTML = "Re-Roll (" + playerRerolls + ")";
       }
 
       function setAbilityStatus(abilityStatus){
@@ -404,10 +413,9 @@
         }
 
         data.randomFactor = document.getElementById("randomFactor").value;
-        console.log(data);
         socket.emit("start-game", myRoomName, data);
-        myDrawButton.style.display   = "flex";
-        myRerollButton.style.display = "flex";
+        drawButton.style.visibility   = "visible";
+        rerollButton.style.visibility = "visible";
       });
 
       downloadButton.addEventListener("click", () => {
@@ -422,18 +430,22 @@
           for (let i = 0; i < roomList.length; i++){
             const room = roomList[i].innerHTML;
             if (roomInput.value === room){
-              let username = prompt("Please enter your name");
-              username = username ? username : "Lame-o";
-              if (username === null){
-                return;
-              }
-              socket.emit("join-room", room, username);
+              joinRoom(room);
               return;
             }
           }
           alert("No room found with name " + roomInput.value);
         }
       });
+
+      function joinRoom(roomName){
+        let username = prompt("Please enter your name");
+            username = username ? username : "Lame-o";
+        if (username === null){
+            return;
+        }
+        socket.emit("join-room", roomName, username);
+      }
 
       socket.on("rooms", (roomList) => {
         const roomsParent = document.getElementById("rooms");
@@ -443,6 +455,9 @@
         for (const roomName of roomList){
           const room           = document.createElement("li");
                 room.innerHTML = roomName;
+                room.onclick   = () => {
+                  joinRoom(roomName);
+                };
 
           roomsParent.appendChild(room);
         }
@@ -467,6 +482,10 @@
         makeMyComponents(playerRole); 
       });
 
+      socket.on("opponent-left-lobby", () => {
+        document.getElementById("player2-username").innerHTML = "";
+      });
+
       socket.on("room-closed", () => {       
         document.getElementById("room-screen").style.display    = "block";
         document.getElementById("loading-screen").style.display = "none";
@@ -488,9 +507,10 @@
         const deckSize  = getExpectedDeckSize();
 
         if (bothReady && deckSize >= 40 && deckSize <= 60) {
+          startButton.style.visibility = "visible";
           startButton.style.display = "block";
         } else {
-          startButton.style.display = "none";
+          startButton.style.visibility = "hidden";
         }
       });
 
@@ -522,7 +542,7 @@
         //no need to do so here, just change the screen and make the abilities
         makeAbilities(abilitiesData);
         document.getElementById("loading-screen").style.display = "none";
-        document.getElementById("playing-screen").style.display = "inline-block";
+        document.getElementById("playing-screen").style.display = "grid";
         
       });
 
@@ -531,27 +551,27 @@
         //drawCard: String,  cardID of the card that was randomly selected to be added to the deck
         const showCard    = (myRole === "viewer" || myRole === player);
         const cardId      = showCard ? drawCard : -1;
-        const newCardPath = showCard ? (imageApiPath + drawCard + ".jpg") : "/public/images/back.png";
-        const playerSide  = document.getElementById(player+ "-card-container");
-        
+        const newLargeCardPath = showCard ? (largeImageApiPath + drawCard + ".jpg") : "/public/images/back.png";
+        const newSmallCardPath = showCard ? (smallImageApiPath + drawCard + ".jpg") : "/public/images/back.png";
         if (!showCard){
-          myDrawButton.style.display   = "flex";
-          myRerollButton.style.display = "flex";
+          drawButton.style.visibility   = "visible";
+          rerollButton.style.visibility = "visible";
+        } else {
+          setDrawnCard(deckContainer, newLargeCardPath, cardId);
         }
 
-        setDrawnCard(playerSide, newCardPath, cardId);
+        
       });
 
       socket.on("reroll", (newCardId, newCardPosition, player) => {
-        const playerSide = document.getElementById(player + "-card-container");
         const showCard = (myRole === "viewer" || myRole === player);
 
         if (!showCard){
           return;
         }
 
-        const rerolledCard     = playerSide.children[newCardPosition];
-              rerolledCard.src = imageApiPath + newCardId + ".jpg";
+        const rerolledCard     = deckContainer.children[newCardPosition];
+              rerolledCard.src = largeImageApiPath + newCardId + ".jpg";
               rerolledCard.alt = newCardId;
       });
 
@@ -571,11 +591,9 @@
           return;
         }
         
-        const playingScreen = document.getElementById("playing-screen");
-        const endScreen     = document.getElementById("end-screen");
-
-        playingScreen.style.display = "none";
-        endScreen.style.display     = "flex";
+        downloadButton.style.visibility = "visible";
+        rerollButton.style.visibility   = "visible";
+        drawButton.style.visibility     = "hidden";
       });
 
       socket.on("download", (player, ydkFile) => {
@@ -583,6 +601,7 @@
           return;
         }
         if (myRole === player){
+          console.log("trying to download");
           download("NoahDeck.ydk", ydkFile);
         }
       });
