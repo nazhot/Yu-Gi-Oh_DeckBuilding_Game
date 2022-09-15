@@ -5,6 +5,7 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
 const fs = require("fs");
+const { isTypedArray } = require("util/types");
 
 app.use(express.static(__dirname));
 
@@ -237,9 +238,6 @@ function getAbilityStatus(roomName){
     player2: roomData.player2
   }
 
-  console.log(roomData.status);
-  console.log(!roomData.status === "download")
-
   for (const player in abilityStatus){
     const playerData = roomData[ids[player]];
     const abilities  = playerData.abilities;
@@ -445,7 +443,7 @@ function rerollCard(roomName, player, cardToReroll){
   playerCards[cardToReroll] = drawCard;
   updateCardTypeCounts(roomName);
   emitPlayerDataChanges(roomName);
-  io.to(roomName).emit("reroll", drawCard, cardToReroll, player);
+  io.to(roomName).emit("reroll", drawCard, roomData.banList[drawCard] === undefined ? 3 : roomData.banList[drawCard], cardToReroll, player);
   return {drawCard, cardToReroll};
 }
 
@@ -456,11 +454,21 @@ function emitCardTypeData(roomName, player){
   for (const cardType of cardTypes){
     const propCardType = cleanCardType(cardType, "");
     if (data !== ""){
-      data += " ";
+      data += "<br>";
     }
     data += cardType + ": " + myData[propCardType + "Used"] + "/"+ myData[propCardType + "Allowed"];
   }
   io.to(roomName).emit("card-type-data", player, data);
+}
+
+function emitLogEvent(roomName, player, logToMe, logToOpponent){
+  const roomData = rooms[roomName];
+  const myData   = roomData[roomData[player]];
+  
+  io.to(roomData[player]).emit("log-update", logToMe);
+  if (logToOpponent !== ""){
+    io.to(myData.opponentId).emit("log-update", logToOpponent);
+  }
 }
 
 app.get("/", (req, res) => {
@@ -572,8 +580,8 @@ io.on("connection", (socket) => {
     updateCardTypeCounts(roomName);
     emitPlayerDataChanges(roomName);
     emitCardTypeData(roomName, player)
-    io.to(roomName).emit("draw-card", player, drawCard);
- 
+    io.to(roomName).emit("draw-card", player, drawCard, roomData.banList[drawCard] === undefined ? 3 : roomData.banList[drawCard]);
+    emitLogEvent(roomName, player, "I drew " + cardData[drawCard].name + "!", "");
     if (roomData.totalCards >= roomData.totalCardsAllowed){
       roomData.status = "download";
       io.to(roomName).emit("end-game");
@@ -591,7 +599,9 @@ io.on("connection", (socket) => {
       return;
     }
     myData.rerolls--;
-    rerollCard(roomName, player, myData.cards.length - 1);
+    const lastCard = myData.cards[myData.cards.length - 1];
+    const newCard =  rerollCard(roomName, player, myData.cards.length - 1);
+    emitLogEvent(roomName, player, "Rerolled " + cardData[lastCard].name + " into " + cardData[newCard.drawCard].name, "");
     emitCardTypeData(roomName, player);
   });
 
@@ -636,18 +646,17 @@ io.on("connection", (socket) => {
     updateCardTypeCounts(roomName);
     emitPlayerDataChanges(roomName);
     emitCardTypeData(roomName, player);
+    emitLogEvent(roomName, player, "Used " + abilityName, myData.name + " used ability");
   });
 
   socket.on("download", (roomName, player) =>{
     const roomData = rooms[roomName];
     const myData   = roomData[roomData[player]];
     const cards    = myData.cards;
-    console.log("making ydk file");
     let ydkFile = "#main";
     for (const card of cards){
       ydkFile += "\n" + card;
     }
-    console.log("made main deck");
     ydkFile += "\n#extra\n";
     for (let i = 0; i < 15; i++){
       const lastCard = myData.cards[myData.cards.length - 1];
@@ -655,7 +664,6 @@ io.on("connection", (socket) => {
       myData.cards.push(drawCard);
       ydkFile += drawCard + "\n";
     }
-    console.log("made extra deck");
     ydkFile += "!side";
     let lastCard = myData.cards[roomData.totalCards - 1];
     for (const cardType of cardTypes){
@@ -668,7 +676,6 @@ io.on("connection", (socket) => {
       ydkFile += "\n" + drawCard;
       lastCard = myData.cards[myData.cards.length - 1];
     }
-    console.log("made side deck");
 
     io.to(roomName).emit("download", player, ydkFile);
   });
@@ -691,8 +698,6 @@ io.on("connection", (socket) => {
           }
           io.to(roomName).emit("opponent-left-lobby");
         }
-      
-        
       }
     }
   });

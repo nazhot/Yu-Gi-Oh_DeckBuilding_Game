@@ -4,7 +4,7 @@
     display: grid;
     grid-template-areas: 'info deck card'
                          'nav nav nav';
-    grid-template-columns: 1fr 4fr 1fr;
+    grid-template-columns: .75fr 4fr 1.5fr;
     grid-template-rows: 9fr 1fr;
     row-gap: .4%;
     column-gap: .2%;
@@ -19,6 +19,32 @@
 
 #playing-information-panel {
     grid-area: info;
+    overflow: auto;
+}
+
+#deck-data {
+    grid-area: deck-data;
+    width: 100%;
+    height: 20%;
+}
+
+#log-container{
+    height: 70%;
+    width: 100%;
+    overflow: auto;
+}
+
+#playing-log {
+    padding: 0;
+    list-style: none;
+}
+
+.playing-log-entry {
+    background-color: linen;
+}
+
+.playing-log-entry:nth-child(odd){
+    background-color: lightgrey;
 }
 
 #playing-deck-panel {

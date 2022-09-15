@@ -31,16 +31,18 @@
     <div id="playing-screen" style="display: none">
       <div id="playing-information-panel" class="playing-panel">
         <p id="deck-data"></p>
-        <ul id="playing-log">
-        </ul>
+        <div id="log-container">
+          <ul id="playing-log">
+          </ul>
+        </div>
       </div>
       <div id="playing-deck-panel" class="playing-panel">
         <div id="playing-deck-container">
-
         </div>
       </div>
       <div id="playing-card-panel" class="playing-panel">
         <img src="/public/images/back.png" id="player-large-card" class="large-card"/>
+        <p id="ban-list-info"></p>
       </div>
       <div id="playing-bottom-bar">
         <button id="draw-button" style="visibility: hidden">Draw Card</button>
@@ -318,7 +320,7 @@
         socket.emit("ready-change", myRoomName, player, myReadyButton.innerHTML);
       }
 
-      function setDrawnCard(playerSide, largeCardImage, cardId) {
+      function setDrawnCard(playerSide, largeCardImage, cardId, limit) {
         //playerSide: dom element, div that correlates with the users side
         //drawCard:   String,      path to the card image to display
         //samePlayer: boolean,     if the player calling this function is the same one that had drawn the card
@@ -329,19 +331,27 @@
               newCard.style.width = cardWidth;
         //when moused over, show the image in the middle card
         //when not moused over, default to card back
-        newCard.onmouseover = () => {
+        setCardMouseEvents(newCard, limit);
+        playerSide.appendChild(newCard);
+      }
+
+      function setCardMouseEvents(card, limit){
+        card.onmouseover = () => {
           const largeCards = document.getElementsByClassName("large-card");
           for (const largeCard of largeCards){
-            largeCard.src = newCard.src;
+            largeCard.src = card.src;
           }
+          const cardLimitText = document.getElementById("ban-list-info");
+          cardLimitText.innerHTML = "Number of Cards Allowed: " + limit;
         };
-        newCard.onmouseleave = () => {
+        card.onmouseleave = () => {
           const largeCards = document.getElementsByClassName("large-card");
           for (const largeCard of largeCards){
             largeCard.src = "/public/images/back.png";
           }
+          const cardLimitText = document.getElementById("ban-list-info");
+          cardLimitText.innerHTML = "";
         };
-        playerSide.appendChild(newCard);
       }
 
       function checkIfNumber(value){
@@ -546,7 +556,7 @@
         
       });
 
-      socket.on("draw-card", (player, drawCard) => {
+      socket.on("draw-card", (player, drawCard, limit) => {
         //player:   String, "player1" or "player2", whoever just drew a card
         //drawCard: String,  cardID of the card that was randomly selected to be added to the deck
         const showCard    = (myRole === "viewer" || myRole === player);
@@ -557,13 +567,13 @@
           drawButton.style.visibility   = "visible";
           rerollButton.style.visibility = "visible";
         } else {
-          setDrawnCard(deckContainer, newLargeCardPath, cardId);
+          setDrawnCard(deckContainer, newLargeCardPath, cardId, limit);
         }
 
         
       });
 
-      socket.on("reroll", (newCardId, newCardPosition, player) => {
+      socket.on("reroll", (newCardId, limit, newCardPosition, player) => {
         const showCard = (myRole === "viewer" || myRole === player);
 
         if (!showCard){
@@ -573,6 +583,7 @@
         const rerolledCard     = deckContainer.children[newCardPosition];
               rerolledCard.src = largeImageApiPath + newCardId + ".jpg";
               rerolledCard.alt = newCardId;
+        setCardMouseEvents(rerolledCard, limit);
       });
 
       socket.on("data-change", (player1Rerolls, player2Rerolls, abilityStatus) => {
@@ -580,9 +591,16 @@
         setAbilityStatus(abilityStatus);
       });
 
+      socket.on("log-update", (logInformation) => {
+        const newLogEntry           = document.createElement("li");
+              newLogEntry.innerHTML = logInformation;
+              newLogEntry.className = "playing-log-entry";
+        document.getElementById("playing-log").appendChild(newLogEntry);
+      });
+
       socket.on("card-type-data", (player, data) => {
         if (myRole === player){
-          document.getElementById("my-card-data").innerHTML = data;
+          document.getElementById("deck-data").innerHTML = data;
         }
       });
 
