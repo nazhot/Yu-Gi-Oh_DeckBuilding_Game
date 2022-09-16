@@ -687,7 +687,7 @@ io.on("connection", (socket) => {
         const isPlayer1 = role  === "player1";
         rooms[roomName].players--;
         delete rooms[roomName][socket.id];
-        if (rooms[roomName].players === 0 || isPlayer1 || rooms[roomName].status === "playing"){
+        if (rooms[roomName].players === 0 || isPlayer1 || (rooms[roomName].status === "playing" && role !== "viewer")){
           console.log(rooms[roomName].logText);
           io.to(roomName).emit("room-closed");
           delete rooms[roomName];

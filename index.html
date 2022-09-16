@@ -53,22 +53,19 @@
 
     <div id="viewing-screen" style="display: none">
       <div id="player1-play-side" class="side1">
+        <span id="viewer-player1-username"></span>
         <div id="player1-card-container" class="card-container">
         </div>
       </div>
       <div id="player2-play-side" class="side2">
+        <span id="viewer-player2-username"></span>
         <div id="player2-card-container" class="card-container">
+          <span id=""
         </div>
       </div>
       <div id="card-and-powerups">
         <img src="/public/images/back.png" id="viewer-large-card" class="large-card" />
-        <span id="my-card-data"></span>
-        <div id="abilities-container">
-        </div>
       </div>
-    </div>
-    <div id="end-screen" style="display:none;">
-      <button id="download-ydk">DOWNLOAD</button>
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -407,7 +404,6 @@
         document.body.removeChild(element);
       }
 
-
       startButton.addEventListener("click", () => {
         const data = {};
 
@@ -485,7 +481,10 @@
 
         myRole     = playerRole;
         myRoomName = room;
-
+        if (myRole === "viewer"){
+          document.getElementById("viewer-player1-username").innerHTML = player1Name;
+          document.getElementById("viewer-player2-username").innerHTML = player2Name;
+        }
         document.getElementById("room-screen").style.display    = "none";
         document.getElementById("loading-screen").style.display = "block";
 
@@ -500,6 +499,7 @@
         document.getElementById("room-screen").style.display    = "block";
         document.getElementById("loading-screen").style.display = "none";
         document.getElementById("playing-screen").style.display = "none";
+        document.getElementById("viewing-screen").style.display = "none";
         alert("ROOM CLOSED");
       });
 
@@ -552,25 +552,28 @@
         //no need to do so here, just change the screen and make the abilities
         makeAbilities(abilitiesData);
         document.getElementById("loading-screen").style.display = "none";
-        document.getElementById("playing-screen").style.display = "grid";
+        if (myRole === "viewer"){
+          document.getElementById("viewing-screen").style.display = "inline-block";
+        } else {
+          document.getElementById("playing-screen").style.display = "grid";
+        }
         
       });
 
       socket.on("draw-card", (player, drawCard, limit) => {
         //player:   String, "player1" or "player2", whoever just drew a card
         //drawCard: String,  cardID of the card that was randomly selected to be added to the deck
-        const showCard    = (myRole === "viewer" || myRole === player);
-        const cardId      = showCard ? drawCard : -1;
-        const newLargeCardPath = showCard ? (largeImageApiPath + drawCard + ".jpg") : "/public/images/back.png";
-        const newSmallCardPath = showCard ? (smallImageApiPath + drawCard + ".jpg") : "/public/images/back.png";
+        const showCard = (myRole === "viewer" || myRole === player);
+        
         if (!showCard){
           drawButton.style.visibility   = "visible";
           rerollButton.style.visibility = "visible";
         } else {
-          setDrawnCard(deckContainer, newLargeCardPath, cardId, limit);
-        }
-
-        
+          const newLargeCardPath = showCard ? (largeImageApiPath + drawCard + ".jpg") : "/public/images/back.png";
+          const containerForCard = myRole === "viewer" ? document.getElementById(player + "-card-container") : deckContainer;
+          
+          setDrawnCard(containerForCard, newLargeCardPath, drawCard, limit);
+        }        
       });
 
       socket.on("reroll", (newCardId, limit, newCardPosition, player) => {
@@ -580,7 +583,9 @@
           return;
         }
 
-        const rerolledCard     = deckContainer.children[newCardPosition];
+        const containerForCard = myRole === "viewer" ? document.getElementById(player + "-card-container") : deckContainer;
+
+        const rerolledCard     = containerForCard.children[newCardPosition];
               rerolledCard.src = largeImageApiPath + newCardId + ".jpg";
               rerolledCard.alt = newCardId;
         setCardMouseEvents(rerolledCard, limit);

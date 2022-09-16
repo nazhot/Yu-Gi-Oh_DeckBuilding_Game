@@ -27,6 +27,9 @@ html {
 #player1-play-side {
   width: 35vw;
   text-align: center;
+      border-style: solid;
+    border-color: black;
+    border-width: 2px;
 }
 
 .side2 {
@@ -46,6 +49,9 @@ html {
   width: 35vw;
   left: 65vw;
   text-align: center;
+  border-style: solid;
+  border-color: black;
+  border-width: 2px;
 }
 
 #rooms > li {
@@ -63,14 +69,9 @@ html {
     height: 70vh;
     left: 35vw;
     top: 5vh;
+    text-align: center;
 }
 
-#middle-card{
-    position: absolute;
-    width: 70%;
-    left: 15%;
-    top: 1%;
-}
 
 .ready-button {
   background-color: darkred;

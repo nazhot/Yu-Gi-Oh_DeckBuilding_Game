@@ -68,7 +68,7 @@
     border-width: 2px;
 }
 
-#player-large-card {
+.large-card {
     width: 75%;
     margin: 2% auto;
 }
