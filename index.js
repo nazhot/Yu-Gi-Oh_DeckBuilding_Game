@@ -280,7 +280,7 @@ function getDefaultPlayerData(playerName, role){
 
 function makeRoom(roomName, creatorId, creatorName){
   rooms[roomName] = {
-    players:    1,
+    playerList: [creatorId],
     viewers:    0,
     totalCards: 0,
     status:     "waiting",
@@ -492,9 +492,11 @@ io.on("connection", (socket) => {
 
   socket.on("join-room", (roomName, joinerName) => {
     const roomData     = rooms[roomName];
-    const joinerRole   = roomData.players === 1 ? "player2" : "viewer";
+    const joinerRole   = roomData.playerList.length === 1 ? "player2" : "viewer";
 
-    roomData[socket.id] = getDefaultPlayerData(joinerName, joinerRole);
+    if (joinerRole !== "viewer"){
+      roomData[socket.id] = getDefaultPlayerData(joinerName, joinerRole);
+    }
     roomData.player2    = roomData.player2 === undefined ? socket.id : roomData.player2;
 
     const player1Id   = roomData.player1;
@@ -506,9 +508,8 @@ io.on("connection", (socket) => {
     roomData[player2Id].opponentId  = player1Id;
     roomData.player1                = player1Id;
 
-    roomData.players++;
+    roomData.playerList.push(socket.id);
     socket.join(roomName);
-
     io.to(roomName).emit("join-room", joinerRole, roomName, player1Name, player2Name);
   });
 
@@ -682,21 +683,25 @@ io.on("connection", (socket) => {
 
   socket.on("disconnecting", () => {
     for (const roomName in rooms){
-      if (rooms[roomName][socket.id] != undefined){
-        const role      = rooms[roomName][socket.id].role ;
-        const isPlayer1 = role  === "player1";
-        rooms[roomName].players--;
-        delete rooms[roomName][socket.id];
-        if (rooms[roomName].players === 0 || isPlayer1 || (rooms[roomName].status === "playing" && role !== "viewer")){
-          console.log(rooms[roomName].logText);
-          io.to(roomName).emit("room-closed");
-          delete rooms[roomName];
-          emitRooms();
-        } else if (rooms[roomName].status === "waiting"){
-          if (role === "player2"){
-            delete rooms[roomName].player2;
+      for (let i = 0; i < rooms[roomName].playerList.length; i++){
+        const id = rooms[roomName].playerList[i];
+        if (id === socket.id){
+          rooms[roomName].playerList.splice(i, 1);
+          const role      = rooms[roomName][socket.id].role ;
+          const isPlayer1 = role  === "player1";
+          delete rooms[roomName][socket.id];
+          if (rooms[roomName].players === 0 || isPlayer1 || (rooms[roomName].status === "playing" && role !== "viewer")){
+            console.log(rooms[roomName].logText);
+            io.to(roomName).emit("room-closed");
+            delete rooms[roomName];
+            emitRooms();
+            break;
+          } else if (rooms[roomName].status === "waiting"){
+            if (role === "player2"){
+              delete rooms[roomName].player2;
+            }
+            io.to(roomName).emit("opponent-left-lobby");
           }
-          io.to(roomName).emit("opponent-left-lobby");
         }
       }
     }
