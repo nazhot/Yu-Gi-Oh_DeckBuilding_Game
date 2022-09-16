@@ -5,7 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/public/css/style.css" />
+    <link rel="stylesheet" href="/public/css/room-screen.css" />
+    <link rel="stylesheet" href="/public/css/loading-screen.css" />
     <link rel="stylesheet" href="/public/css/playing-screen.css" />
+    <link rel="stylesheet" href="/public/css/viewer-screen.css" />
   </head>
   <body>
     <div id="room-screen">
@@ -17,12 +20,12 @@
       <ul id="rooms"></ul>
     </div>
     <div id="loading-screen" style="display:none;">
-      <div id="player1-side" class="side1">
+      <div id="player1-loading-side">
         <p style="display: inline-block" id="player1-username"></p>
         <p id="player1-connection" style="display: inline-block">NOT READY</p>
         <button id="start-game-button" style="display: none">START GAME</button>
       </div>
-      <div id="player2-side" class="side2">
+      <div id="player2-loading-side">
         <p style="display: inline-block" id="player2-username"></p>
         <p id="player2-connection" style="display: inline-block">NOT READY</p>
       </div>
@@ -52,18 +55,17 @@
     </div>
 
     <div id="viewing-screen" style="display: none">
-      <div id="player1-play-side" class="side1">
+      <div id="viewer-player1-side">
         <span id="viewer-player1-username"></span>
-        <div id="player1-card-container" class="card-container">
+        <div id="viewer-player1-deck-container" class="viewer-deck-container">
         </div>
       </div>
-      <div id="player2-play-side" class="side2">
+      <div id="viewer-player2-side">
         <span id="viewer-player2-username"></span>
-        <div id="player2-card-container" class="card-container">
-          <span id=""
+        <div id="viewer-player2-deck-container" class="viewer-deck-container">
         </div>
       </div>
-      <div id="card-and-powerups">
+      <div id="viewer-card-container">
         <img src="/public/images/back.png" id="viewer-large-card" class="large-card" />
       </div>
     </div>
@@ -144,7 +146,7 @@
           return;
         }
 
-        const myReadySide = document.getElementById(player + "-side");
+        const myReadySide = document.getElementById(player + "-loading-side");
 
         myReadyButton               = document.createElement("button");
         myReadyButton.id            = player + "-ready-button";
@@ -570,7 +572,7 @@
           rerollButton.style.visibility = "visible";
         } else {
           const newLargeCardPath = showCard ? (largeImageApiPath + drawCard + ".jpg") : "/public/images/back.png";
-          const containerForCard = myRole === "viewer" ? document.getElementById(player + "-card-container") : deckContainer;
+          const containerForCard = myRole === "viewer" ? document.getElementById("viewer-" + player + "-deck-container") : deckContainer;
           
           setDrawnCard(containerForCard, newLargeCardPath, drawCard, limit);
         }        
@@ -583,7 +585,7 @@
           return;
         }
 
-        const containerForCard = myRole === "viewer" ? document.getElementById(player + "-card-container") : deckContainer;
+        const containerForCard = myRole === "viewer" ? document.getElementById("viewer-" + player + "-deck-container") : deckContainer;
 
         const rerolledCard     = containerForCard.children[newCardPosition];
               rerolledCard.src = largeImageApiPath + newCardId + ".jpg";

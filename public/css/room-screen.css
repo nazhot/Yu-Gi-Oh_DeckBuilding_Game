@@ -1,0 +1,7 @@
+#rooms > li {
+    display: block;
+}
+  
+#rooms > li:hover {
+    background-color: #bc5a84;
+}

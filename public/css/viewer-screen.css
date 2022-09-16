@@ -1,0 +1,27 @@
+#viewer-player1-side {
+    position: fixed;
+}
+
+#viewer-card-container{
+    position: fixed;
+    display: inline-block;
+    width: 30vw;
+    height: 70vh;
+    left: 35vw;
+    top: 0;
+    text-align: center;
+}
+  
+#viewer-player2-side {
+    position: fixed;
+    left: 65vw;
+}
+
+.viewer-deck-container{
+    width: 35vw;
+    text-align: center;
+    height: 94vh;
+    border-style: solid;
+    border-color: black;
+    border-width: 2px;
+  }
