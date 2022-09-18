@@ -78,9 +78,6 @@ const abilities = {
         rerolls: +2,
         turnsBeforeUseAbility: 1
       }, 
-      targetOpponent: {
-
-      },
       canUse: true
     },
     "Long Term Success" : {
@@ -99,9 +96,6 @@ const abilities = {
       currentlyActive: false,
       targetMe : {
         rerolls: -3
-      },
-      targetOpponent: {
-
       },
       canUse: true
     }
@@ -341,8 +335,8 @@ function cardsLeft(roomName, player, cardId){
 }
 
 function updateCardTypeCounts(roomName){
-  const roomData    = rooms[roomName];
-  const players = {
+  const roomData = rooms[roomName];
+  const players  = {
     player1: roomData[roomData.player1],
     player2: roomData[roomData.player2]
   }

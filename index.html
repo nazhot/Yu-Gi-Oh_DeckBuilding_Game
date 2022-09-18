@@ -255,7 +255,11 @@
           const value = targetMe[trait];
           toolText += "•" +  trait + ": " + value + "<br />";
         }
-        toolText += "<br />Opponent";
+        console.log(targetOpponent);
+        if (targetOpponent !== undefined){
+          toolText += "<br />Opponent";
+        }
+        
         for (const trait in targetOpponent){
           const value = targetOpponent[trait];
           toolText += "<br />•" +  trait + ": " + value;
@@ -271,8 +275,8 @@
        * @param {Number} col         Which column to stick the component in (grid layout)
        */
       function makeAbilityComponent(abilityName, abilityData, abilityNumber){
-        const newAbility = document.createElement("div");
-              newAbility.className             = "ability-tooltip";
+        const newAbility                       = document.createElement("div");
+              newAbility.className             = "ability";
               newAbility.id                    = abilityData.id + "-ability"
               newAbility.style.backgroundColor = "#a086b7";
               newAbility.innerHTML             = abilityName;
@@ -282,12 +286,13 @@
               });
 
         const newAbilityToolTip           = document.createElement("span");
-              newAbilityToolTip.id        = abilityData.id + "-ability-tooltip-text"
-              newAbilityToolTip.className = "ability-tooltip-text";
+              newAbilityToolTip.id        = abilityData.id + "-ability-tooltip"
+              newAbilityToolTip.className = "ability-tooltip";
               newAbilityToolTip.innerHTML = makeToolTipText(abilityData);
 
+        newAbility.appendChild(newAbilityToolTip);              
         bottomNavBar.appendChild(newAbility);
-        newAbility.appendChild(newAbilityToolTip);
+        
         
       }
       /**
@@ -517,7 +522,7 @@
         if (myRole === "player2" || myRole === "viewer") {
           return;
         }
-
+ 
         const bothReady = checkIfBothReady();
         const deckSize  = getExpectedDeckSize();
 

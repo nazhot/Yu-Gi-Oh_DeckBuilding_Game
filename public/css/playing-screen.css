@@ -60,7 +60,7 @@
 #playing-bottom-bar {
     grid-area: nav;
     display: grid;
-    grid-template-areas: 'draw reroll . . . download . . . . ability10 ability9 ability8 ability7 ability6 ability5 ability4 ability3 ability2 ability1';
+    grid-template-areas: 'draw reroll . . . download . . . ability10 ability9 ability8 ability7 ability6 ability5 ability4 ability3 ability2 ability1 .';
     grid-template-columns: repeat(20, 1fr);
     column-gap: .1%;
     border-style: solid;
@@ -81,10 +81,31 @@
     grid-area: reroll;
 }
 
-.ability-tooltip {
-    display: inline;
-    vertical-align: middle;
+.ability {
+    position: relative;
     border: 1px solid black;
-    text-align: center;
-    line-height: 100%;
+    text-align: center; 
 }
+
+/* Tooltip text */
+.ability .ability-tooltip {
+    visibility: hidden;
+    height: fit-content;
+    width: 300%;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+   
+    position: absolute;
+    z-index: 1;
+    bottom: 110%;
+    left: 50%;
+    margin-left: -150%;
+  }
+  
+  /* Show the tooltip text when you mouse over the tooltip container */
+  .ability:hover .ability-tooltip {
+    visibility: visible;
+  }

@@ -11,25 +11,3 @@ html {
   background-size: 100% 100%;
 }
 
-/* Tooltip text */
-.ability-tooltip .ability-tooltip-text {
-  visibility: hidden;
-  width: 120px;
-  background-color: black;
-  color: #fff;
-  text-align: center;
-  padding: 5px 0;
-  border-radius: 6px;
- 
-  /* Position the tooltip text - see examples below! */
-  position: absolute;
-  z-index: 1;
-  bottom: 100%;
-  left: 50%;
-  margin-left: -60px;
-}
-
-/* Show the tooltip text when you mouse over the tooltip container */
-.ability-tooltip:hover .ability-tooltip-text {
-  visibility: visible;
-}
