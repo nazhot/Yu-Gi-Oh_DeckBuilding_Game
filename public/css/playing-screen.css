@@ -108,4 +108,11 @@
   /* Show the tooltip text when you mouse over the tooltip container */
   .ability:hover .ability-tooltip {
     visibility: visible;
+    animation-name: fadein;
+    animation-duration: .6s;
+  }
+
+  @keyframes fadein {
+    from {opacity: 0;}
+    to   {opacity: 1;}
   }
