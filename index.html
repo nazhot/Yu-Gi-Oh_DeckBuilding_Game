@@ -131,7 +131,13 @@
           return;
         }
       }
-
+ 
+      /**
+       * Clean up a given card type, by converting it to lowercase and replacing spaces with given 'replace'
+       * @param  {String} cardType The card type ("Normal Monster", "Continuous Trap", etc.)
+       * @param  {String} replace  What to replace spaces with (usually "-" or "")
+       * @return {String}          The edited card type text
+       */
       function cleanCardType(cardType, replace){
         return cardType.toLowerCase().replace(" ", replace);
       }
@@ -241,6 +247,7 @@
         });
 
       }
+
       /**
        * Generate the tool tip text for an ability
        * @param  {Object} abilityData Contains all of the information about the ability, used to make the text
@@ -269,10 +276,9 @@
 
       /**
        * Create the div that acts as a button to activate an ability
-       * @param {String} abilityName Name of the ability
-       * @param {Object} abilityData All the data about the ability
-       * @param {Number} row         Which row to stick the component in (grid layout)
-       * @param {Number} col         Which column to stick the component in (grid layout)
+       * @param {String} abilityName   Name of the ability
+       * @param {Object} abilityData   All the data about the ability
+       * @param {Number} abilityNumber Number of the ability, used to determine its position in the bottom nav bar
        */
       function makeAbilityComponent(abilityName, abilityData, abilityNumber){
         const newAbility                       = document.createElement("div");
@@ -295,6 +301,7 @@
         
         
       }
+
       /**
        * Make all of the ability components
        * @param {Object} abilitiesData All the data about the abilities
@@ -307,23 +314,36 @@
         }
       }
 
+      /**
+       * Check if both players have readied up
+       * @return {Boolean} Are both players ready
+       */
       function checkIfBothReady() {
         const player1 = document.getElementById("player1-connection").innerHTML;
         const player2 = document.getElementById("player2-connection").innerHTML;
         return player1 === "READY" && player2 === "READY";
       }
 
+      /**
+       * Change own ready button to its opposite, and emit that change so opponent/viewer can see it
+       * @param {String} player The player that clicked their ready button ["player1", "player2"]
+       */
       function readyButtonClicked(player) {
-        //player: "player1" or "player2"
         const ready = myReadyButton.innerHTML === "READY";
 
         myReadyButton.innerHTML             = ready ? "NOT READY" : "READY";
         myReadyButton.style.backgroundColor = ready ? "darkred"   : "darkgreen";
   
-        //send out message so that other player/viewer can see your current status
         socket.emit("ready-change", myRoomName, player, myReadyButton.innerHTML);
       }
 
+      /**
+       * Add newly drawn card to the current player's deck
+       * @param  {Object} playerSide     The document element containing the current player's deck
+       * @param  {String} largeCardImage The path to the image of the drawn card
+       * @param  {String} cardId         The id of the drawn card
+       * @param  {Number} limit          How many of this card are allowed in a deck (based on banlist, not current count)
+       */
       function setDrawnCard(playerSide, largeCardImage, cardId, limit) {
         //playerSide: dom element, div that correlates with the users side
         //drawCard:   String,      path to the card image to display

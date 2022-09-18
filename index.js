@@ -537,10 +537,12 @@ io.on("connection", (socket) => {
       const dataName          = componentCardType + "-textbox";
       const allowedPropName   = propCardType + "Allowed";
       const usedPropName      = propCardType + "Used";
+
       roomData[player1Id][allowedPropName] = data[dataName];
       roomData[player2Id][allowedPropName] = data[dataName];
-      roomData[player1Id][usedPropName] = 0;
-      roomData[player2Id][usedPropName] = 0;
+      roomData[player1Id][usedPropName]    = 0;
+      roomData[player2Id][usedPropName]    = 0;
+      
       totalCardsAllowed += data[dataName];
       roomData.logText += "\n" + allowedPropName + ": " + data[dataName];
     }
