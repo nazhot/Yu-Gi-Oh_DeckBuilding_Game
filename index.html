@@ -218,8 +218,11 @@
           return;
         }
     
-        myReadyButton = document.getElementById(player + "-ready-button");
-        myReadyButton.style.display = "block";
+        myReadyButton                       = document.getElementById(player + "-ready-button");
+        myReadyButton.style.display         = "block";
+        myReadyButton.innerHTML             = "NOT READY";
+        myReadyButton.style.backgroundColor = "darkred";
+
         if (player === "player1"){
           startButton.style.visibility = "hidden";
           startButton.style.display    = "block";
@@ -261,7 +264,7 @@
        */
       function makeAbilityComponent(abilityName, abilityData, abilityNumber){
         const newAbility                       = document.createElement("div");
-              newAbility.className             = "ability";
+              newAbility.className             = "ability abilityClass";
               newAbility.id                    = abilityData.id + "-ability"
               newAbility.style.backgroundColor = "#a086b7";
               newAbility.innerHTML             = abilityName;
@@ -272,7 +275,7 @@
 
         const newAbilityToolTip           = document.createElement("span");
               newAbilityToolTip.id        = abilityData.id + "-ability-tooltip"
-              newAbilityToolTip.className = "ability-tooltip";
+              newAbilityToolTip.className = "ability-tooltip abilityClass";
               newAbilityToolTip.innerHTML = makeToolTipText(abilityData);
 
         newAbility.appendChild(newAbilityToolTip);              
@@ -286,7 +289,13 @@
        * @param {Object} abilitiesData All the data about the abilities
        */
       function makeAbilities(abilitiesData){
-        let abilityNumber = 1;
+        const pastAbilities = document.getElementsByClassName("abilityClass");
+        let   abilityNumber = 1;
+
+        while (pastAbilities.length > 0){
+          pastAbilities[0].parentNode.removeChild(pastAbilities[0]);
+        }
+
         for (const abilityName in abilitiesData){
           makeAbilityComponent(abilityName, abilitiesData[abilityName], abilityNumber);
           abilityNumber++;
@@ -509,11 +518,20 @@
         document.getElementById("loading-screen").style.display = "none";
         document.getElementById("playing-screen").style.display = "none";
         document.getElementById("viewing-screen").style.display = "none";
+        document.getElementById("player1-connection").innerHTML = "NOT READY";
         document.getElementById("player2-username").innerHTML   = "";
         document.getElementById("player2-connection").innerHTML = "NOT READY";
+
         myRole     = "";
         myRoomName = "";
         myUsername = "";
+        numRerolls = 5;
+        
+        const deckContainer = document.getElementById("playing-deck-container");
+        while (deckContainer.lastChild) {
+          deckContainer.removeChild(deckContainer.lastChild);
+        }
+
         alert("ROOM CLOSED");
       });
 
