@@ -31,3 +31,15 @@
     border-radius: 25px;
     margin: 0 auto;
 }
+
+#game-settings-container {
+    text-align: left;
+}
+
+.settings-dropdown {
+    display: block;
+}
+
+.type-count {
+    display: block;
+}

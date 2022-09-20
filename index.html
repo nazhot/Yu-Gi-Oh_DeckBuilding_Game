@@ -22,12 +22,32 @@
     <div id="loading-screen" style="display:none;">
       <div id="player1-loading-side">
         <p style="display: inline-block" id="player1-username"></p>
-        <p id="player1-connection" style="display: inline-block">NOT READY</p>
-        <button id="start-game-button" style="display: none">START GAME</button>
+        <p id="player1-connection" style="display: inline-block;">NOT READY</p>
+        <button id="player1-ready-button" class="ready-button" style="display: none;">NOT READY</button>
+        <div id="game-settings-container" style="display: none;">
+          <button id="start-game-button" style="display: none">START GAME</button>
+          <label for="card-list-dropdown">Card List</label>
+          <select id="card-list-dropdown" class="settings-dropdown"></select>
+          <label for="ban-list-dropdown">Ban List</label>
+          <select id="ban-list-dropdown" class="settings-dropdown"></select>
+          <label for="set-list-dropdown">Set List</label>
+          <select id="set-list-dropdown" class="settings-dropdown"></select>
+          <label for="spells-count">Spells Count</label>
+          <input type="text" id="spells-count" class="type-count">
+          <label for="traps-count">Traps Count</label>
+          <input type="text" id="traps-count" class="type-count">
+          <label for="normal-monsters-count">Normal Monsters Count</label>
+          <input type="text" id="normal-monsters-count" class="type-count">
+          <label for="effect-monsters-count">Effect Monsters Count</label>
+          <input type="text" id="effect-monsters-count" class="type-count">
+          <label for="random-factor">Random Factor</label>
+          <select id="random-factor"></select>
+        </div>
       </div>
       <div id="player2-loading-side">
         <p style="display: inline-block" id="player2-username"></p>
         <p id="player2-connection" style="display: inline-block">NOT READY</p>
+        <button id="player2-ready-button" class="ready-button" style="display: none;">NOT READY</button>
       </div>
     </div>
 
@@ -78,9 +98,9 @@
       const cardTypes        = ["Spells", "Traps", "Normal Monsters", "Effect Monsters"];
       const dropDowns        = {}; //holder for the three drop down elements, since they're so similar in name
       const cardTypeElements = {};
-      let myRole             = "";
-      let myRoomName         = "";
-      let myUsername         = "";
+      let   myRole           = "";
+      let   myRoomName       = "";
+      let   myUsername       = "";
 
       const largeImageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics/";
       const smallImageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics_small/";
@@ -95,6 +115,8 @@
       const deckContainer      = document.getElementById("playing-deck-container");
 
       let myReadyButton;
+
+
 
       /**
        * Make the game lobby for other player(s) to join
@@ -142,6 +164,34 @@
         return cardType.toLowerCase().replace(" ", replace);
       }
 
+      function firstTimeSetup(){
+        //set random factor
+        const randomFactor = document.getElementById("random-factor");
+        for (let i = 0; i <= 100; i += 25){
+          const randomValue           = document.createElement("option");
+                randomValue.innerHTML = i + "%";
+                randomValue.value     = i / 100.0;
+
+          randomFactor.appendChild(randomValue);
+        }
+        //add event listener to ready buttons
+        for (const player of ["player1", "player2"]){
+          const readyButton = document.getElementById(player + "-ready-button");
+          readyButton.addEventListener("click", () => {
+          readyButtonClicked(player);
+        });
+        }
+        //add onkeyup/onpaste to counts
+        for (const cardType of cardTypes){
+          const componentCardType  = cleanCardType(cardType, "-");
+          const cardTypeElement    = document.getElementById(componentCardType + "-count");
+          cardTypeElement.value   = 10;
+          cardTypeElement.onkeyup = getExpectedDeckSize;
+          cardTypeElement.onpaste = getExpectedDeckSize;
+        }
+      }
+
+
       /**
        * Create all of the HTML components (dropdowns, textboxes, buttons) for the player
        * @param  {String} player "player1", "player2", or "viewer", the player that is creating the components
@@ -152,86 +202,74 @@
           return;
         }
 
-        const myReadySide = document.getElementById(player + "-loading-side");
-
-        myReadyButton               = document.createElement("button");
-        myReadyButton.id            = player + "-ready-button";
-        myReadyButton.className     = "ready-button";
-        myReadyButton.style.display = "block";
-        myReadyButton.innerHTML     = "NOT READY";
-        myReadyButton.addEventListener("click", () => {
-          readyButtonClicked(player);
-        });
+        // const myReadySide = document.getElementById(player + "-loading-side");
+        // myReadyButton               = document.createElement("button");
+        // myReadyButton.id            = player + "-ready-button";
+        // myReadyButton.className     = "ready-button";
+        // myReadyButton.style.display = "block";
+        // myReadyButton.innerHTML     = "NOT READY";
+        // myReadyButton.addEventListener("click", () => {
+        //   readyButtonClicked(player);
+        // });
     
-        myReadySide.children[1].insertAdjacentElement("afterEnd", myReadyButton);
-        
+        //myReadySide.children[1].insertAdjacentElement("afterEnd", myReadyButton);
+        myReadyButton = document.getElementById(player + "-ready-button");
+        myReadyButton.style.display = "block";
         if (player === "player1"){
           startButton.style.visibility = "hidden";
           startButton.style.display    = "block";
-          for (let i = 0; i < listNames.length; i++) {
-            const listName        = listNames[i]; //card, ban, set
-            const capitalListName = listName.charAt(0).toUpperCase() + listName.slice(1);
+          document.getElementById("game-settings-container").style.display = "block";
+          // // for (let i = 0; i < listNames.length; i++) {
+          // //   const listName        = listNames[i]; //card, ban, set
+          // //   const capitalListName = listName.charAt(0).toUpperCase() + listName.slice(1);
 
-            const listLabel         = document.createElement("label");
-            listLabel.htmlFor       = listName + "-list-select";
-            listLabel.id            = listName + "-list-label";
-            listLabel.style.display = "flex";
-            listLabel.innerHTML     = capitalListName + " List";
+          // //   const listLabel         = document.createElement("label");
+          // //   listLabel.htmlFor       = listName + "-list-select";
+          // //   listLabel.id            = listName + "-list-label";
+          // //   listLabel.style.display = "flex";
+          // //   listLabel.innerHTML     = capitalListName + " List";
 
-            const list         = document.createElement("select");
-            list.name          = listName + "-list-select";
-            list.id            = listName + "-list-select";
-            list.style.display = "flex";
+          // //   const list         = document.createElement("select");
+          // //   list.name          = listName + "-list-select";
+          // //   list.id            = listName + "-list-select";
+          // //   list.style.display = "flex";
 
-            myReadySide.appendChild(listLabel);
-            myReadySide.appendChild(list);
-            dropDowns[listName] = list;
-          }
+          // //   //myReadySide.appendChild(listLabel);
+          // //   //myReadySide.appendChild(list);
+          // //   mySideContainer.appendChild(listLabel);
+          // //   mySideContainer.appendChild(list);
+          // //   dropDowns[listName] = list;
+          // // }
 
-          for (const cardType of cardTypes){
-            const componentCardType  = cleanCardType(cardType, "-");
-            const labelCardType = cardType;
+          // for (const cardType of cardTypes){
+          //   const componentCardType  = cleanCardType(cardType, "-");
+          //   const labelCardType = cardType;
 
-            const cardTypeLabel               = document.createElement("label");
-                  cardTypeLabel.htmlFor       = componentCardType + "-count";
-                  cardTypeLabel.id            = componentCardType + "-count-label";
-                  cardTypeLabel.style.display = "flex";
-                  cardTypeLabel.innerHTML     = labelCardType + " Count";
+          //   const cardTypeLabel               = document.createElement("label");
+          //         cardTypeLabel.htmlFor       = componentCardType + "-count";
+          //         cardTypeLabel.id            = componentCardType + "-count-label";
+          //         cardTypeLabel.style.display = "flex";
+          //         cardTypeLabel.innerHTML     = labelCardType + " Count";
 
-            const cardTypeTextBox                       = document.createElement("input");
-                  cardTypeTextBox.id                    = componentCardType + "-count";
-                  cardTypeTextBox.name                  = componentCardType + "-count";
-                  cardTypeTextBox.style.display         = "flex";
-                  cardTypeTextBox.type                  = "text"; //super neat fun fact, firefox doesn't care if you type non-numbers into here, just need to check in function
-                  cardTypeTextBox.style.backgroundColor = "white";
-                  cardTypeTextBox.onkeyup               = getExpectedDeckSize;
-                  cardTypeTextBox.onpaste               = getExpectedDeckSize;
-                  cardTypeTextBox.value                 = 10;
-                  cardTypeElements[componentCardType]   = cardTypeTextBox;
+          //   const cardTypeTextBox                       = document.createElement("input");
+          //         cardTypeTextBox.id                    = componentCardType + "-count";
+          //         cardTypeTextBox.name                  = componentCardType + "-count";
+          //         cardTypeTextBox.style.display         = "flex";
+          //         cardTypeTextBox.type                  = "text"; //super neat fun fact, firefox doesn't care if you type non-numbers into here, just need to check in function
+          //         cardTypeTextBox.style.backgroundColor = "white";
+          //         cardTypeTextBox.onkeyup               = getExpectedDeckSize;
+          //         cardTypeTextBox.onpaste               = getExpectedDeckSize;
+          //         cardTypeTextBox.value                 = 10;
+          //         cardTypeElements[componentCardType]   = cardTypeTextBox;
 
-            myReadySide.appendChild(cardTypeLabel);
-            myReadySide.appendChild(cardTypeTextBox);
-          }
+          //   //myReadySide.appendChild(cardTypeLabel);
+          //   mySideContainer.appendChild(cardTypeLabel);
+          //   //myReadySide.appendChild(cardTypeTextBox);
+          //   mySideContainer.appendChild(cardTypeTextBox);
+          // }
 
-          const randomValueLabel             = document.createElement("label");   
-              randomValueLabel.htmlFor       = "randomFactor";
-              randomValueLabel.style.display = "flex";
-              randomValueLabel.innerHTML     = "Random Factor";
 
-          const randomValueDropdown               = document.createElement("select");
-                randomValueDropdown.style.display = "flex";
-                randomValueDropdown.id            = "randomFactor";
-
-          for (let i = 0; i <= 100; i += 25){
-            const randomValue           = document.createElement("option");
-                  randomValue.innerHTML = i + "%";
-                  randomValue.value     = i / 100.0;
-
-            randomValueDropdown.appendChild(randomValue);
-          }
-          
-          myReadySide.appendChild(randomValueLabel);
-          myReadySide.appendChild(randomValueDropdown);
+ 
 
           socket.emit("getLists", myRoomName);
         }
@@ -384,6 +422,7 @@
 
       function getExpectedDeckSize(){
         let totalCount = 0;
+        let isValid    = true;
         for (const cardType of cardTypes){
           const componentCardType = cleanCardType(cardType, "-");
           const textBox = document.getElementById(componentCardType + "-count");
@@ -391,13 +430,14 @@
 
           totalCount += Math.floor(value);
 
-          if (isNaN(totalCount)){
+          if (isNaN(value)){
             textBox.style.backgroundColor = "red";
-            return -1;
+            isValid = false;
+          } else {
+            textBox.style.backgroundColor = "white";
           }
-          textBox.style.backgroundColor = "white";
         }
-        return totalCount;
+        return isValid ? totalCount : -1;
       }
 
       function setRerollText(playerRerolls){
@@ -520,6 +560,7 @@
 
       socket.on("opponent-left-lobby", () => {
         document.getElementById("player2-username").innerHTML = "";
+        document.getElementById("player2-connection").innerHTML = "NOT READY";
       });
 
       socket.on("room-closed", () => {       
@@ -527,6 +568,8 @@
         document.getElementById("loading-screen").style.display = "none";
         document.getElementById("playing-screen").style.display = "none";
         document.getElementById("viewing-screen").style.display = "none";
+        document.getElementById("player2-username").innerHTML   = "";
+        document.getElementById("player2-connection").innerHTML = "NOT READY";
         myRole     = "";
         myRoomName = "";
         myUsername = "";
@@ -567,7 +610,7 @@
           const listName = listNames[i]; //card, ban, set
           const list     = lists[listName];
           for (let j = 0; j < lists[listName].length; j++) {
-            const dropDown           = document.getElementById(listName + "-list-select");
+            const dropDown           = document.getElementById(listName + "-list-dropdown");
             const newEntry           = document.createElement("option");
                   newEntry.value     = list[j];
                   newEntry.innerHTML = list[j];
@@ -575,6 +618,7 @@
             dropDown.appendChild(newEntry);
           }
         }
+        firstTimeSetup();
       });
 
       socket.on("start-game", (abilitiesData) => {
