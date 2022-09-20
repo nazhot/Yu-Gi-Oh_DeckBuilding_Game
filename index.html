@@ -184,10 +184,12 @@
         //add onkeyup/onpaste to counts
         for (const cardType of cardTypes){
           const componentCardType  = cleanCardType(cardType, "-");
-          const cardTypeElement    = document.getElementById(componentCardType + "-count");
-          cardTypeElement.value   = 10;
-          cardTypeElement.onkeyup = getExpectedDeckSize;
-          cardTypeElement.onpaste = getExpectedDeckSize;
+          const cardTypeElement         = document.getElementById(componentCardType + "-count");
+                cardTypeElement.value   = 10;
+                cardTypeElement.onkeyup = getExpectedDeckSize;
+                cardTypeElement.onpaste = getExpectedDeckSize;
+          
+          cardTypeElements[componentCardType] = cardTypeElement;
         }
       }
 
@@ -201,72 +203,13 @@
         if (player === "viewer"){
           return;
         }
-
-        // const myReadySide = document.getElementById(player + "-loading-side");
-        // myReadyButton               = document.createElement("button");
-        // myReadyButton.id            = player + "-ready-button";
-        // myReadyButton.className     = "ready-button";
-        // myReadyButton.style.display = "block";
-        // myReadyButton.innerHTML     = "NOT READY";
-        // myReadyButton.addEventListener("click", () => {
-        //   readyButtonClicked(player);
-        // });
     
-        //myReadySide.children[1].insertAdjacentElement("afterEnd", myReadyButton);
         myReadyButton = document.getElementById(player + "-ready-button");
         myReadyButton.style.display = "block";
         if (player === "player1"){
           startButton.style.visibility = "hidden";
           startButton.style.display    = "block";
           document.getElementById("game-settings-container").style.display = "block";
-          // // for (let i = 0; i < listNames.length; i++) {
-          // //   const listName        = listNames[i]; //card, ban, set
-          // //   const capitalListName = listName.charAt(0).toUpperCase() + listName.slice(1);
-
-          // //   const listLabel         = document.createElement("label");
-          // //   listLabel.htmlFor       = listName + "-list-select";
-          // //   listLabel.id            = listName + "-list-label";
-          // //   listLabel.style.display = "flex";
-          // //   listLabel.innerHTML     = capitalListName + " List";
-
-          // //   const list         = document.createElement("select");
-          // //   list.name          = listName + "-list-select";
-          // //   list.id            = listName + "-list-select";
-          // //   list.style.display = "flex";
-
-          // //   //myReadySide.appendChild(listLabel);
-          // //   //myReadySide.appendChild(list);
-          // //   mySideContainer.appendChild(listLabel);
-          // //   mySideContainer.appendChild(list);
-          // //   dropDowns[listName] = list;
-          // // }
-
-          // for (const cardType of cardTypes){
-          //   const componentCardType  = cleanCardType(cardType, "-");
-          //   const labelCardType = cardType;
-
-          //   const cardTypeLabel               = document.createElement("label");
-          //         cardTypeLabel.htmlFor       = componentCardType + "-count";
-          //         cardTypeLabel.id            = componentCardType + "-count-label";
-          //         cardTypeLabel.style.display = "flex";
-          //         cardTypeLabel.innerHTML     = labelCardType + " Count";
-
-          //   const cardTypeTextBox                       = document.createElement("input");
-          //         cardTypeTextBox.id                    = componentCardType + "-count";
-          //         cardTypeTextBox.name                  = componentCardType + "-count";
-          //         cardTypeTextBox.style.display         = "flex";
-          //         cardTypeTextBox.type                  = "text"; //super neat fun fact, firefox doesn't care if you type non-numbers into here, just need to check in function
-          //         cardTypeTextBox.style.backgroundColor = "white";
-          //         cardTypeTextBox.onkeyup               = getExpectedDeckSize;
-          //         cardTypeTextBox.onpaste               = getExpectedDeckSize;
-          //         cardTypeTextBox.value                 = 10;
-          //         cardTypeElements[componentCardType]   = cardTypeTextBox;
-
-          //   //myReadySide.appendChild(cardTypeLabel);
-          //   mySideContainer.appendChild(cardTypeLabel);
-          //   //myReadySide.appendChild(cardTypeTextBox);
-          //   mySideContainer.appendChild(cardTypeTextBox);
-          // }
         }
 
         drawButton.addEventListener("click", () => {
@@ -613,7 +556,6 @@
             dropDown.appendChild(newEntry);
           }
         }
-        firstTimeSetup();
       });
 
       socket.on("start-game", (abilitiesData) => {
