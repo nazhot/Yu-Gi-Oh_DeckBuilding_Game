@@ -115,8 +115,7 @@
       const deckContainer      = document.getElementById("playing-deck-container");
 
       let myReadyButton;
-
-      socket.emit("getLists", socket.id);
+      socket.emit("getLists");
       firstTimeSetup();
       /**
        * Make the game lobby for other player(s) to join
@@ -190,6 +189,11 @@
                 cardTypeElement.onpaste = getExpectedDeckSize;
           
           cardTypeElements[componentCardType] = cardTypeElement;
+        }
+
+        for (const listName of listNames){
+          const dropDown = document.getElementById(listName + "-list-dropdown");
+          dropDowns[listName] = dropDown;
         }
       }
 
@@ -423,7 +427,7 @@
           data[componentCardType + "-textbox"] = Math.floor(value);
         }
 
-        data.randomFactor = document.getElementById("randomFactor").value;
+        data.randomFactor = document.getElementById("random-factor").value;
         socket.emit("start-game", myRoomName, data);
         drawButton.style.visibility   = "visible";
         rerollButton.style.visibility = "visible";
@@ -555,6 +559,7 @@
             
             dropDown.appendChild(newEntry);
           }
+          
         }
       });
 

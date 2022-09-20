@@ -470,11 +470,6 @@ app.get("/", (req, res) => {
 });
 
 io.on("connection", (socket) => {
-  for (const room of socket.rooms){
-    if (room != socket.id){
-      socket.leave(room);
-    }
-  }
   emitRooms();
 
   socket.on("make-room", (roomName, creatorName) =>{
@@ -507,8 +502,8 @@ io.on("connection", (socket) => {
     io.to(roomName).emit("join-room", joinerRole, roomName, player1Name, player2Name);
   });
 
-  socket.on("getLists", (roomName) => {
-    io.to(roomName).emit("setLists", cardListNames, banListNames, setListNames);
+  socket.on("getLists", () => {
+    io.to(socket.id).emit("setLists", cardListNames, banListNames, setListNames);
   });
 
   socket.on("ready-change", (roomName, player, readyText) => {
