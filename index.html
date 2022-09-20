@@ -195,6 +195,16 @@
           const dropDown = document.getElementById(listName + "-list-dropdown");
           dropDowns[listName] = dropDown;
         }
+
+        drawButton.addEventListener("click", () => {
+          socket.emit("draw-card", myRoomName, myRole);
+          drawButton.style.visibility = "hidden";
+          rerollButton.style.visibility = "hidden";
+        });
+
+        rerollButton.addEventListener("click", () => {
+          socket.emit("reroll", myRoomName, myRole);
+        });
       }
 
 
@@ -215,17 +225,6 @@
           startButton.style.display    = "block";
           document.getElementById("game-settings-container").style.display = "block";
         }
-
-        drawButton.addEventListener("click", () => {
-          socket.emit("draw-card", myRoomName, myRole);
-          drawButton.style.visibility = "hidden";
-          rerollButton.style.visibility = "hidden";
-        });
-
-        rerollButton.addEventListener("click", () => {
-          socket.emit("reroll", myRoomName, player);
-        });
-
       }
 
       /**
