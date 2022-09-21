@@ -4,14 +4,32 @@ A new take on Yu-Gi-Oh deck building, adding the element of randomness, some ski
 ## Overview
 A tool for adding another layer on top of the Yu-Gi-Oh card game! 2 players can go back and forth, getting random cards to compile their decks, with some interaction between opponents. This tool is meant to keep Yu-Gi-Oh fun by: taking a step back from the competitive side, generating decks more akin to playground-style duels, and turning deck building into an interactive game.
 ## Current Version
+v0.0.4
+- **Abilities Added**
+  - Russian Roulette
+    - "You're in a bind, you'll gain some rerolls, but at what cost?"
+    - Gain 2 rerolls, but a random card of yours is rerolled
+  - Long Term Success
+    - "I knew intro to business would pay off!"
+    - Costs 3 rerolls, get 6 rerolls in 5 turns
+- Playing screen look fully updated
+- Hovering over a card will show how many of that card are allowed per the ban list
+- Log of your actions is shown as the game progresses
+- You can click on a room name in order to join now
+- Download screen removed, download button now appears at the bottom of the playing screen after last card drawn
+- Deck breakdown information shown in the left panel (Card Type: current in deck / number allowed)
+- Tool tip slowly fades in when an ability is hovered over
+- Bug Fixes:
+  - Attempting to make/join games after an opponent left your previous game caused multiple issues, now fixed
+  - Players are able to see/reroll their last card
+  
+## Previous Versions
 v0.0.3
 - Added ability to host multiple games at once
   - Home screen is now the option to make or join a game
 - Program resets all values/data when new game is created, which was the issue with v0.0.2
 - Users can now put in a name to be displayed to them/their opponent
 
-  
-## Previous Versions
 v0.0.2
 - Reroll functionality added (last card drawn, only)
 - Basic abilities have been added
@@ -26,7 +44,6 @@ v0.0.2
   - Also made a matrix for how many times cards appeared in decks, total
   - Values in the connections matrix are used as weights for a random draw, and the randomness factor has the weights go from all equal (random factor of 1) to fully based on values (random factor of 0)
 - At the end of the game, both players are able to download their ydk file to be used in a duel online
-
 
 v0.0.1
 - Ugly as can be
@@ -49,16 +66,14 @@ v0.0.1
   - How many of each spell/trap/monster cards they want
   - Monster type/attribute limitations
 - Abilities
-  - Re-roll last card you/opponent given
+  - Re-roll last card opponent given
   - View last card opponent given
   - Set own/opponent last card given to 1/2/3
-  - Opponent gets same card next turn (yours or theirs)
+  - Opponent gets same card next turn (theirs)
   - Swap random cards
   - Swap chosen cards
   - Draw multiple cards next turn, opponent can't use powerups
-- 
   
-
 ## Built With
 - node.js
 - express.js
@@ -73,4 +88,4 @@ Run the following script in your command line:
 ```
 npm start
 ```
-Once the server is running, go to http://localhost:3000 in your browser.
+Once the server is running, go to http://localhost:8080 in your browser.
