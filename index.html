@@ -115,11 +115,13 @@
       const deckContainer      = document.getElementById("playing-deck-container");
 
       let myReadyButton;
+
       socket.emit("getLists");
       firstTimeSetup();
+
       /**
        * Make the game lobby for other player(s) to join
-       */
+      */
       function makeRoom(){
         const roomHolder  = document.getElementById("rooms");
         const elementList = roomHolder.getElementsByTagName("li");
@@ -158,7 +160,7 @@
        * @param  {String} cardType The card type ("Normal Monster", "Continuous Trap", etc.)
        * @param  {String} replace  What to replace spaces with (usually "-" or "")
        * @return {String}          The edited card type text
-       */
+      */
       function cleanCardType(cardType, replace){
         return cardType.toLowerCase().replace(" ", replace);
       }
@@ -205,13 +207,53 @@
         rerollButton.addEventListener("click", () => {
           socket.emit("reroll", myRoomName, myRole);
         });
+
+        startButton.addEventListener("click", () => {
+          const data = {};
+
+          for (const listName of listNames){
+            data[listName + "-dropdown"] = dropDowns[listName].value;
+          }
+
+          for (const cardType of cardTypes){
+            const componentCardType = cleanCardType(cardType, "-");
+            let value = cardTypeElements[componentCardType].value;
+            value = value === "" ? 0 : value;
+            data[componentCardType + "-textbox"] = Math.floor(value);
+          }
+
+          data.randomFactor = document.getElementById("random-factor").value;
+          socket.emit("start-game", myRoomName, data);
+          drawButton.style.visibility   = "visible";
+          rerollButton.style.visibility = "visible";
+        });
+
+        downloadButton.addEventListener("click", () => {
+          socket.emit("download", myRoomName, myRole);
+        });
+
+        joinRoomForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const roomInput = document.getElementById("join-room-input");
+          if (roomInput.value){
+            const roomList = document.getElementById("rooms").getElementsByTagName("li");
+            for (let i = 0; i < roomList.length; i++){
+              const room = roomList[i].innerHTML;
+              if (roomInput.value === room){
+                joinRoom(room);
+                return;
+              }
+            }
+            alert("No room found with name " + roomInput.value);
+          }
+        });
       }
 
 
       /**
-       * Create all of the HTML components (dropdowns, textboxes, buttons) for the player
-       * @param  {String} player "player1", "player2", or "viewer", the player that is creating the components
-       */
+       * Set ready button and start button (if applicable) for the player
+       * @param  {String} player "player1", "player2", or "viewer", the player that is setting the components
+      */
       function makeMyComponents(player){
 
         if (player === "viewer"){
@@ -234,7 +276,7 @@
        * Generate the tool tip text for an ability
        * @param  {Object} abilityData Contains all of the information about the ability, used to make the text
        * @return {String}             The tool tip text
-       */
+      */
       function makeToolTipText(abilityData){
         let   toolText       = abilityData.description + "<br />Me<br />";
         const targetMe       = abilityData.targetMe;
@@ -261,7 +303,7 @@
        * @param {String} abilityName   Name of the ability
        * @param {Object} abilityData   All the data about the ability
        * @param {Number} abilityNumber Number of the ability, used to determine its position in the bottom nav bar
-       */
+      */
       function makeAbilityComponent(abilityName, abilityData, abilityNumber){
         const newAbility                       = document.createElement("div");
               newAbility.className             = "ability abilityClass";
@@ -287,14 +329,16 @@
       /**
        * Make all of the ability components
        * @param {Object} abilitiesData All the data about the abilities
-       */
+      */
       function makeAbilities(abilitiesData){
+        //remove all previous abilities if they are present
         const pastAbilities = document.getElementsByClassName("abilityClass");
-        let   abilityNumber = 1;
-
+        
         while (pastAbilities.length > 0){
           pastAbilities[0].parentNode.removeChild(pastAbilities[0]);
         }
+
+        let   abilityNumber = 1;
 
         for (const abilityName in abilitiesData){
           makeAbilityComponent(abilityName, abilitiesData[abilityName], abilityNumber);
@@ -305,7 +349,7 @@
       /**
        * Check if both players have readied up
        * @return {Boolean} Are both players ready
-       */
+      */
       function checkIfBothReady() {
         const player1 = document.getElementById("player1-connection").innerHTML;
         const player2 = document.getElementById("player2-connection").innerHTML;
@@ -315,7 +359,7 @@
       /**
        * Change own ready button to its opposite, and emit that change so opponent/viewer can see it
        * @param {String} player The player that clicked their ready button ["player1", "player2"]
-       */
+      */
       function readyButtonClicked(player) {
         const ready = myReadyButton.innerHTML === "READY";
 
@@ -331,7 +375,7 @@
        * @param  {String} largeCardImage The path to the image of the drawn card
        * @param  {String} cardId         The id of the drawn card
        * @param  {Number} limit          How many of this card are allowed in a deck (based on banlist, not current count)
-       */
+      */
       function setDrawnCard(playerSide, largeCardImage, cardId, limit) {
         //playerSide: dom element, div that correlates with the users side
         //drawCard:   String,      path to the card image to display
@@ -347,6 +391,11 @@
         playerSide.appendChild(newCard);
       }
 
+      /**
+       * Set the onmouseover and onmouseleave functions of a card being put into players deck
+       * @param  {Object} card  The card element to add the functions to
+       * @param  {Number} limit How many of the card is allowed per ban list
+      */
       function setCardMouseEvents(card, limit){
         card.onmouseover = () => {
           const largeCards = document.getElementsByClassName("large-card");
@@ -366,6 +415,10 @@
         };
       }
 
+      /**
+       * Check if given value is a valid number
+       * @param  {String} value The value to check
+      */
       function checkIfNumber(value){
         return (!isNaN(value) && !isNaN(parseFloat(value)));
       }
@@ -420,46 +473,6 @@
 
         document.body.removeChild(element);
       }
-
-      startButton.addEventListener("click", () => {
-        const data = {};
-
-        for (const listName of listNames){
-          data[listName + "-dropdown"] = dropDowns[listName].value;
-        }
-
-        for (const cardType of cardTypes){
-          const componentCardType = cleanCardType(cardType, "-");
-          let value = cardTypeElements[componentCardType].value;
-          value = value === "" ? 0 : value;
-          data[componentCardType + "-textbox"] = Math.floor(value);
-        }
-
-        data.randomFactor = document.getElementById("random-factor").value;
-        socket.emit("start-game", myRoomName, data);
-        drawButton.style.visibility   = "visible";
-        rerollButton.style.visibility = "visible";
-      });
-
-      downloadButton.addEventListener("click", () => {
-        socket.emit("download", myRoomName, myRole);
-      });
-
-      joinRoomForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const roomInput = document.getElementById("join-room-input");
-        if (roomInput.value){
-          const roomList = document.getElementById("rooms").getElementsByTagName("li");
-          for (let i = 0; i < roomList.length; i++){
-            const room = roomList[i].innerHTML;
-            if (roomInput.value === room){
-              joinRoom(room);
-              return;
-            }
-          }
-          alert("No room found with name " + roomInput.value);
-        }
-      });
 
       function joinRoom(roomName){
         let username = prompt("Please enter your name");
