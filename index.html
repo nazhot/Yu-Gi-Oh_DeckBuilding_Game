@@ -21,6 +21,8 @@
     </div>
     <div id="lobby-screen" class="screen-container" style="display:none;">
       <div id="lobby-information-panel" class="left-panel panel">
+        <span>Room Name: </span> 
+        <span id="lobby-room-name"></span>
         <p class="player-span">Player 1</p>
         <span id="player1-username" class="lobby-username"></span>
         <span id="player1-status"   class="lobby-status">NOT READY</span>
@@ -30,22 +32,21 @@
       </div>
       <div id="lobby-settings-panel" class="middle-panel panel">
         <div id="game-settings-container" style="display: none;">
-          <button id="start-game-button" style="display: none">START GAME</button>
-          <label for="card-list-dropdown">Card List</label>
+          <label  for="card-list-dropdown">Card List</label>
           <select id="card-list-dropdown" class="settings-dropdown"></select>
-          <label for="ban-list-dropdown">Ban List</label>
+          <label  for="ban-list-dropdown">Ban List</label>
           <select id="ban-list-dropdown" class="settings-dropdown"></select>
-          <label for="set-list-dropdown">Set List</label>
+          <label  for="set-list-dropdown">Set List</label>
           <select id="set-list-dropdown" class="settings-dropdown"></select>
-          <label for="spells-count">Spells Count</label>
-          <input type="text" id="spells-count" class="type-count">
-          <label for="traps-count">Traps Count</label>
-          <input type="text" id="traps-count" class="type-count">
-          <label for="normal-monsters-count">Normal Monsters Count</label>
-          <input type="text" id="normal-monsters-count" class="type-count">
-          <label for="effect-monsters-count">Effect Monsters Count</label>
-          <input type="text" id="effect-monsters-count" class="type-count">
-          <label for="random-factor">Random Factor</label>
+          <label  for="spells-count">Spells Count</label>
+          <input  type="text" id="spells-count" class="type-count">
+          <label  for="traps-count">Traps Count</label>
+          <input  type="text" id="traps-count" class="type-count">
+          <label  for="normal-monsters-count">Normal Monsters Count</label>
+          <input  type="text" id="normal-monsters-count" class="type-count">
+          <label  for="effect-monsters-count">Effect Monsters Count</label>
+          <input  type="text" id="effect-monsters-count" class="type-count">
+          <label  for="random-factor">Random Factor</label>
           <select id="random-factor"></select>
         </div>
       </div>
@@ -53,8 +54,8 @@
 
       </div>
       <div id="lobby-bottom-panel" class="bottom-panel panel">
-        <p id="lobby-room-name"></p>
         <button id="ready-button" onclick="readyButtonClicked()">NOT READY</button>
+        <button id="start-game-button" style="display: none">START GAME</button>
       </div>
     </div>
 
@@ -261,14 +262,13 @@
           return;
         }
     
-        readyButton.style.display         = "block";
         readyButton.innerHTML             = "NOT READY";
         readyButton.style.backgroundColor = "darkred";
 
         if (player === "player1"){
           startButton.style.visibility = "hidden";
           startButton.style.display    = "block";
-          document.getElementById("game-settings-container").style.display = "block";
+          document.getElementById("game-settings-container").style.display = "grid";
         }
       }
 
@@ -361,6 +361,7 @@
        * @param {String} player The player that clicked their ready button ["player1", "player2"]
       */
       function readyButtonClicked() {
+        console.log(myRole);
         const ready = readyButton.innerHTML === "READY";
 
         readyButton.innerHTML             = ready ? "NOT READY" : "READY";
@@ -536,6 +537,7 @@
         }
 
         if (myRole != ""){ //already joined
+          socket.emit("ready-change", myRoomName, myRole, readyButton.innerHTML);
           return; 
         }
 
