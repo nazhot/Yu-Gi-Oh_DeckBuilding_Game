@@ -1,4 +1,4 @@
-#game-settings-container {
+.settings-container {
     display: grid;
     grid-template-areas: '. .'
                          '. .'
@@ -10,7 +10,6 @@
 
 #lobby-bottom-panel {
     display: grid;
-    margin: 0;
     row-gap: 0.1%;
     column-gap: 0.1%;
     grid-template-areas: '. . . ready startb . .';
@@ -23,7 +22,6 @@
 }
   
 #start-game-button {
-    width: 100%;
     grid-area: startb;
     background-color: rgba(120, 120, 120, 20);
     border-radius: 25px;

@@ -515,6 +515,10 @@ io.on("connection", (socket) => {
     io.to(roomName).emit("ready-change", player, readyText);
   });
 
+  socket.on("update-game-settings", (roomName, settings)=> {
+    io.to(rooms[roomName].player2).emit("update-game-settings", settings);
+  });
+
   socket.on("start-game", (roomName, data) => {
     const cardListName = data["card-dropdown"];
     const banListName  = data["ban-dropdown"];

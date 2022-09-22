@@ -31,23 +31,26 @@
         <span id="player2-status"   class="lobby-status">NOT CONNECTED</span>
       </div>
       <div id="lobby-settings-panel" class="middle-panel panel">
-        <div id="game-settings-container" style="display: none;">
-          <label  for="card-list-dropdown">Card List</label>
-          <select id="card-list-dropdown" class="settings-dropdown"></select>
-          <label  for="ban-list-dropdown">Ban List</label>
-          <select id="ban-list-dropdown" class="settings-dropdown"></select>
-          <label  for="set-list-dropdown">Set List</label>
-          <select id="set-list-dropdown" class="settings-dropdown"></select>
-          <label  for="spells-count">Spells Count</label>
-          <input  type="text" id="spells-count" class="type-count">
-          <label  for="traps-count">Traps Count</label>
-          <input  type="text" id="traps-count" class="type-count">
-          <label  for="normal-monsters-count">Normal Monsters Count</label>
-          <input  type="text" id="normal-monsters-count" class="type-count">
-          <label  for="effect-monsters-count">Effect Monsters Count</label>
-          <input  type="text" id="effect-monsters-count" class="type-count">
-          <label  for="random-factor">Random Factor</label>
-          <select id="random-factor"></select>
+        <div id="variable-game-settings-container" class="settings-container" style="display: none;">
+          <label  for="card-list-dropdown" class="settings">Card List</label>
+          <select id="card-list-dropdown" class="settings-dropdown settings" onchange="emitGameSettings()"></select>
+          <label  for="ban-list-dropdown" class="settings">Ban List</label>
+          <select id="ban-list-dropdown" class="settings-dropdown settings" onchange="emitGameSettings()"></select>
+          <label  for="set-list-dropdown" class="settings">Set List</label>
+          <select id="set-list-dropdown" class="settings-dropdown settings" onchange="emitGameSettings()"></select>
+          <label  for="spells-count" class="settings">Spells Count</label>
+          <input  type="text" id="spells-count" class="type-count settings" onchange="emitGameSettings()">
+          <label  for="traps-count" class="settings">Traps Count</label>
+          <input  type="text" id="traps-count" class="type-count settings" onchange="emitGameSettings()">
+          <label  for="normal-monsters-count" class="settings">Normal Monsters Count</label>
+          <input  type="text" id="normal-monsters-count" class="type-count settings" onchange="emitGameSettings()">
+          <label  for="effect-monsters-count" class="settings">Effect Monsters Count</label>
+          <input  type="text" id="effect-monsters-count" class="type-count settings" onchange="emitGameSettings()">
+          <label  for="random-factor" class="settings">Random Factor</label>
+          <select id="random-factor" class="settings" onchange="emitGameSettings()"></select>
+        </div>
+        <div id="game-settings-container" class="settings-container" style="display: none;">
+        
         </div>
       </div>
       <div id="lobby-viewing-panel" class="right-panel panel">
@@ -268,6 +271,8 @@
         if (player === "player1"){
           startButton.style.visibility = "hidden";
           startButton.style.display    = "block";
+          document.getElementById("variable-game-settings-container").style.display = "grid";
+        } else {
           document.getElementById("game-settings-container").style.display = "grid";
         }
       }
@@ -361,7 +366,6 @@
        * @param {String} player The player that clicked their ready button ["player1", "player2"]
       */
       function readyButtonClicked() {
-        console.log(myRole);
         const ready = readyButton.innerHTML === "READY";
 
         readyButton.innerHTML             = ready ? "NOT READY" : "READY";
@@ -471,6 +475,23 @@
       }
 
       /**
+       * Emit the current game settings, so that player2 can see what player1 set them to
+       *  Attached to onchange of dropdowns and textboxes
+      */ 
+      function emitGameSettings(){
+        const settingsArray = [];
+        const allSettings   = document.getElementsByClassName("settings");
+        for (const setting of allSettings){
+          if (setting.value){
+            settingsArray.push(setting.value);
+          } else {
+            settingsArray.push(setting.innerHTML);
+          }
+        }
+        socket.emit("update-game-settings", myRoomName, settingsArray);
+      }
+
+      /**
        * Download the ydk file associated with the player's cards
        * @param {String} filename The name the downloaded file will have
        * @param {String} text     The text of the ydk file, list of card ids
@@ -538,6 +559,7 @@
 
         if (myRole != ""){ //already joined
           socket.emit("ready-change", myRoomName, myRole, readyButton.innerHTML);
+          emitGameSettings();
           return; 
         }
 
@@ -549,6 +571,7 @@
           document.getElementById("viewer-player2-username").innerHTML = player2Name;
         } else {
           document.getElementById(myRole + "-username").style.backgroundColor = "#bc5a84";
+          document.getElementById("game-settings-container").style.display    = "grid";
         }
 
         document.getElementById("room-screen").style.display    = "none";
@@ -561,7 +584,6 @@
        * Sets player2 values back to their default
        *  Emitted when the opponent left the lobby screen of a game you started
       */ 
-
       socket.on("opponent-left-lobby", () => {
         document.getElementById("player2-username").innerHTML = "";
         document.getElementById("player2-status").innerHTML = "NOT CONNECTED";
@@ -616,6 +638,24 @@
           startButton.style.display = "block";
         } else {
           startButton.style.visibility = "hidden";
+        }
+      });
+
+      /**
+       * Update the game settings to what player1 set them to, should only be going to player2
+       *  Emitted when player1 changes dropdown or textbox
+       * @param {Object} settings Array of all of the settings from player1, includes the labels
+      */
+      socket.on("update-game-settings", (settings) => {
+        const settingsContainer = document.getElementById("game-settings-container");
+        while (settingsContainer.lastChild){
+          settingsContainer.removeChild(settingsContainer.lastChild);
+        }
+        for (const setting of settings){
+          const settingElement           = document.createElement("p");
+                settingElement.innerHTML = setting;
+
+          settingsContainer.appendChild(settingElement);
         }
       });
 
