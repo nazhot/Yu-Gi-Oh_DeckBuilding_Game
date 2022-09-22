@@ -503,7 +503,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("getLists", () => {
-    io.to(socket.id).emit("setLists", cardListNames, banListNames, setListNames);
+    io.to(socket.id).emit("set-lists", cardListNames, banListNames, setListNames);
   });
 
   socket.on("ready-change", (roomName, player, readyText) => {

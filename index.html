@@ -165,6 +165,9 @@
         return cardType.toLowerCase().replace(" ", replace);
       }
 
+      /**
+       * Do all one-time things needed when client first connects: set dropdowns andadd event listeners
+      */
       function firstTimeSetup(){
         //set random factor
         const randomFactor = document.getElementById("random-factor");
@@ -371,16 +374,12 @@
 
       /**
        * Add newly drawn card to the current player's deck
-       * @param  {Object} playerSide     The document element containing the current player's deck
-       * @param  {String} largeCardImage The path to the image of the drawn card
-       * @param  {String} cardId         The id of the drawn card
-       * @param  {Number} limit          How many of this card are allowed in a deck (based on banlist, not current count)
+       * @param {Object} playerSide     The document element containing the current player's deck
+       * @param {String} largeCardImage The path to the image of the drawn card
+       * @param {String} cardId         The id of the drawn card
+       * @param {Number} limit          How many of this card are allowed in a deck (based on banlist, not current count)
       */
       function setDrawnCard(playerSide, largeCardImage, cardId, limit) {
-        //playerSide: dom element, div that correlates with the users side
-        //drawCard:   String,      path to the card image to display
-        //samePlayer: boolean,     if the player calling this function is the same one that had drawn the card
-        //cardId:     String,      the id of the card, to be stored in the alt of the image, for updating counts on server side if rerolled
         const newCard             = document.createElement("img");
               newCard.src         = largeCardImage;
               newCard.alt         = cardId;
@@ -393,8 +392,8 @@
 
       /**
        * Set the onmouseover and onmouseleave functions of a card being put into players deck
-       * @param  {Object} card  The card element to add the functions to
-       * @param  {Number} limit How many of the card is allowed per ban list
+       * @param {Object} card  The card element to add the functions to
+       * @param {Number} limit How many of the card is allowed per ban list
       */
       function setCardMouseEvents(card, limit){
         card.onmouseover = () => {
@@ -417,12 +416,16 @@
 
       /**
        * Check if given value is a valid number
-       * @param  {String} value The value to check
+       * @param {String} value The value to check
       */
       function checkIfNumber(value){
         return (!isNaN(value) && !isNaN(parseFloat(value)));
       }
 
+      /**
+       * Get the size of the decks, based on what player1 entered into textboxes. Also verifies they are valid numbers
+       * @return {Number} The sum of all of the numbers in card type textboxes, -1 if at least one isn't a valid number
+      */ 
       function getExpectedDeckSize(){
         let totalCount = 0;
         let isValid    = true;
@@ -443,10 +446,18 @@
         return isValid ? totalCount : -1;
       }
 
+      /**
+       * Set the text of the reroll button so that it contains how many rerolls player has left
+       * @param {Number} playerRerolls How many rerolls the player has
+      */
       function setRerollText(playerRerolls){
         rerollButton.innerHTML = "Re-Roll (" + playerRerolls + ")";
       }
 
+      /**
+       * Set ability divs to fully opaque or mostly transparent, based on whether it can be used or not
+       * @param {Object} abilityStatus Keys {String} Ids of all abilities | Values {Boolean} Whether ability can be used
+      */
       function setAbilityStatus(abilityStatus){
         if (myRole === "viewer"){
           return;
@@ -461,6 +472,11 @@
         }
       }
 
+      /**
+       * Download the ydk file associated with the player's cards
+       * @param {String} filename The name the downloaded file will have
+       * @param {String} text     The text of the ydk file, list of card ids
+      */
       function download(filename, text) {
         const element = document.createElement('a');
               element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
@@ -474,6 +490,10 @@
         document.body.removeChild(element);
       }
 
+      /**
+       * Connect to an already made room
+       * @param {String} roomName Id of the room to connect to
+      */ 
       function joinRoom(roomName){
         let username = prompt("Please enter your name");
             username = username ? username : "Lame-o";
@@ -483,6 +503,10 @@
         socket.emit("join-room", roomName, username);
       }
 
+      /**
+       * Set the list of open rooms on room screen
+       * @param {Object} roomList Array containing all of the rooms currently stored by the server
+      */
       socket.on("rooms", (roomList) => {
         const roomsParent = document.getElementById("rooms");
         while (roomsParent.firstChild){
@@ -499,8 +523,16 @@
         }
       });
 
+      /**
+       * Join an open room, and switch over to loading screen
+       * @param {String} playerRole  Which role the emitting player has: player1, player2, viewer
+       * @param {String} room        Id of the room being joined
+       * @param {String} player1Name The username selected by player1, always set
+       * @param {String} player2Name The username selected by player2, will default to "" if player1 emitted
+      */ 
       socket.on("join-room", (playerRole, room, player1Name, player2Name) => {
         document.getElementById("player1-username").innerHTML = player1Name + ":";
+
         if (player2Name != ""){
           document.getElementById("player2-username").innerHTML = player2Name + ":";
         }
@@ -511,21 +543,32 @@
 
         myRole     = playerRole;
         myRoomName = room;
+
         if (myRole === "viewer"){
           document.getElementById("viewer-player1-username").innerHTML = player1Name;
           document.getElementById("viewer-player2-username").innerHTML = player2Name;
         }
+
         document.getElementById("room-screen").style.display    = "none";
         document.getElementById("loading-screen").style.display = "block";
 
         makeMyComponents(playerRole); 
       });
 
+      /**
+       * Sets player2 values back to their default
+       *  Emitted when the opponent left the loading screen of a game you started
+      */ 
+
       socket.on("opponent-left-lobby", () => {
         document.getElementById("player2-username").innerHTML = "";
         document.getElementById("player2-connection").innerHTML = "NOT READY";
       });
 
+      /**
+       * Goes back to room screen, removes player2 username, sets all of the player's settings to default, and removes any previous cards
+       *  Emitted when player1 leaves a game at any stage, or either player leaves during playing phase
+      */ 
       socket.on("room-closed", () => {       
         document.getElementById("room-screen").style.display    = "block";
         document.getElementById("loading-screen").style.display = "none";
@@ -540,6 +583,7 @@
         myUsername = "";
         numRerolls = 5;
         
+        //remove all previous cards
         const deckContainer = document.getElementById("playing-deck-container");
         while (deckContainer.lastChild) {
           deckContainer.removeChild(deckContainer.lastChild);
@@ -548,9 +592,13 @@
         alert("ROOM CLOSED");
       });
 
+      /**
+       * Sets that player's ready status, and checks if both players are ready and settings are valid (to show start button to player1)
+       *  Emitted when either player clicks readyButton
+       * @param {String} player    Whoever clicked their readyButton: player1, player2
+       * @param {String} readyText Whether that player is now ready or not: READY, NOT READY
+      */ 
       socket.on("ready-change", (player, readyText) => {
-        //player:    String, "player1" or "player2", whoever clicked their ready button
-        //readyText: String, "READY" or "NOT READY", whatever the button's text value now is
         const readyTextComponent           = document.getElementById(player + "-connection");
               readyTextComponent.innerHTML = readyText;
         //if client is player1, additional check has to be done to see if both players are ready and start button should be shown
@@ -569,9 +617,14 @@
         }
       });
 
-      socket.on("setLists", (cardLists, banLists, setLists) => {
-        //all lists are arrays, pertaining to the names of the files for each one
-        //used to set the drop down entries
+      /**
+       * Sets all of the dropdowns with values based on what files are stored on server for card/ban/set lists
+       *  Emitted when player first connects to website
+       * @param {Object} cardLists Array containing the names of the allowed card lists
+       * @param {Object} banLists  Array containing the names of the allowed ban lists
+       * @param {Object} setLists  Array containing the names of the allowed set lists
+      */ 
+      socket.on("set-lists", (cardLists, banLists, setLists) => {
         let lists = {
           card: cardLists,
           ban: banLists,
@@ -588,27 +641,35 @@
                   newEntry.innerHTML = list[j];
             
             dropDown.appendChild(newEntry);
-          }
-          
+          } 
         }
       });
 
+      /**
+       * Start the game, creating ability divs and switching to playing screen, or switching to viewing screen
+       *  Emitted when player1 clicks start game button
+       * @param {Object} abilitiesData All of the data surrounding abilities in the game, their id, description, functions, etc.
+      */ 
       socket.on("start-game", (abilitiesData) => {
-        //player 1 takes care of making the right buttons visible when they click the start button
-        //no need to do so here, just change the screen and make the abilities
-        makeAbilities(abilitiesData);
+ 
         document.getElementById("loading-screen").style.display = "none";
+
         if (myRole === "viewer"){
           document.getElementById("viewing-screen").style.display = "inline-block";
         } else {
+          makeAbilities(abilitiesData);
           document.getElementById("playing-screen").style.display = "grid";
         }
-        
       });
 
+      /**
+       * Draw a new card, display its image in the deck container of the player/viewer, hide reroll/draw button
+       *  Emitted when drawButton is clicked
+       * @param {String} player   Player that drew the card: player1, player2
+       * @param {String} drawCard Id of the card that was drawn
+       * @param {Number} limit    How many of that card are allowed based on chosen ban list
+      */ 
       socket.on("draw-card", (player, drawCard, limit) => {
-        //player:   String, "player1" or "player2", whoever just drew a card
-        //drawCard: String,  cardID of the card that was randomly selected to be added to the deck
         const showCard = (myRole === "viewer" || myRole === player);
         
         if (!showCard){
@@ -622,6 +683,14 @@
         }        
       });
 
+      /**
+       * Reroll a card in the player's deck, changing its image and limit
+       *  Emitted when rerollButton is clicked
+       * @param {String} newCardId       Id of the card after rerolling
+       * @param {Number} limit           How many of that card are allowed based on chosen ban list
+       * @param {Number} newCardPosition Index of the card that was rerolled
+       * @param {String} player          Player that did the rerolling: player1, player2
+      */ 
       socket.on("reroll", (newCardId, limit, newCardPosition, player) => {
         const showCard = (myRole === "viewer" || myRole === player);
 
@@ -637,11 +706,23 @@
         setCardMouseEvents(rerolledCard, limit);
       });
 
+      /**
+       * Update data values (rerolls, ability statuses) whenever they change
+       *  Emitted when a player uses an ability, rerolls, or draws a card. Emitted to both players every time
+       * @param {Number} player1Rerolls How many rerolls player1 now has
+       * @param {Number} player2Rerolls How many rerolls player2 now has
+       * @param {Object} abilityStatus  Keys {String} Ids of all abilities | Values {Boolean} Whether ability can be used
+      */
       socket.on("data-change", (player1Rerolls, player2Rerolls, abilityStatus) => {
         setRerollText(myRole === "player1" ? player1Rerolls : player2Rerolls);
         setAbilityStatus(abilityStatus);
       });
 
+      /**
+       * Update the player log with actions taken
+       *  Emitted when player uses ability, rerolls, or draws, or when opponent uses ability
+       * @param {String} logInformation Line that is to be added to the log
+      */
       socket.on("log-update", (logInformation) => {
         const newLogEntry           = document.createElement("li");
               newLogEntry.innerHTML = logInformation;
@@ -649,12 +730,22 @@
         document.getElementById("playing-log").appendChild(newLogEntry);
       });
 
+      /**
+       * Sets the card type data for the player
+       *  Emitted whenever the deck changes (some abilities, reroll, draw)
+       * @param {String} player Whose data it is
+       * @param {String} data   Information on card types in deck
+      */
       socket.on("card-type-data", (player, data) => {
         if (myRole === player){
           document.getElementById("deck-data").innerHTML = data;
         }
       });
 
+      /**
+       * Hide the player's draw/ability buttons, and show the download button
+       *  Emitted when the total number of cards in both players' decks reaches the set limit
+      */
       socket.on("end-game", () => {
         if (myRole === "viewer"){
           return;
@@ -665,6 +756,12 @@
         drawButton.style.visibility     = "hidden";
       });
 
+      /**
+       * Download the ydk file associated with the player's cards
+       *  Emitted when downloadButton is clicked
+       * @param {String} player  Who clicked the download button
+       * @param {String} ydkFile Data the ydk file will contain
+      */
       socket.on("download", (player, ydkFile) => {
         if (myRole === "viewer"){
           return;
