@@ -19,11 +19,16 @@
       <p> Rooms: </p>
       <ul id="rooms"></ul>
     </div>
-    <div id="lobby-screen" style="display:none;">
-      <div id="player1-lobby-side">
-        <p style="display: inline-block" id="player1-username"></p>
-        <p id="player1-connection" style="display: inline-block;">NOT READY</p>
-        <button id="player1-ready-button" class="ready-button" style="display: none;">NOT READY</button>
+    <div id="lobby-screen" class="screen-container" style="display:none;">
+      <div id="lobby-information-panel" class="left-panel panel">
+        <p class="player-span">Player 1</p>
+        <span id="player1-username" class="lobby-username"></span>
+        <span id="player1-status"   class="lobby-status">NOT READY</span>
+        <p class="player-span">Player 2</p>
+        <span id="player2-username" class="lobby-username"></span>
+        <span id="player2-status"   class="lobby-status">NOT CONNECTED</span>
+      </div>
+      <div id="lobby-settings-panel" class="middle-panel panel">
         <div id="game-settings-container" style="display: none;">
           <button id="start-game-button" style="display: none">START GAME</button>
           <label for="card-list-dropdown">Card List</label>
@@ -44,10 +49,12 @@
           <select id="random-factor"></select>
         </div>
       </div>
-      <div id="player2-lobby-side">
-        <p style="display: inline-block" id="player2-username"></p>
-        <p id="player2-connection" style="display: inline-block">NOT READY</p>
-        <button id="player2-ready-button" class="ready-button" style="display: none;">NOT READY</button>
+      <div id="lobby-viewing-panel" class="right-panel panel">
+
+      </div>
+      <div id="lobby-bottom-panel" class="bottom-panel panel">
+        <p id="lobby-room-name"></p>
+        <button id="ready-button" onclick="readyButtonClicked()">NOT READY</button>
       </div>
     </div>
 
@@ -107,14 +114,13 @@
       const cardWidth         = "10%";
   
       const startButton        = document.getElementById("start-game-button");
+      const readyButton        = document.getElementById("ready-button");
       const bottomNavBar       = document.getElementById("playing-bottom-bar");
       const downloadButton     = document.getElementById("download-button");
       const joinRoomForm       = document.getElementById("room-form");
       const drawButton         = document.getElementById("draw-button");
       const rerollButton       = document.getElementById("reroll-button");
       const deckContainer      = document.getElementById("playing-deck-container");
-
-      let myReadyButton;
 
       socket.emit("getLists");
       firstTimeSetup();
@@ -148,8 +154,7 @@
           username   = username ? username : "Lame-o";
           myUsername = username;
           
-          document.getElementById("player1-username").innerHTML = myUsername + ":";
-
+          document.getElementById("lobby-room-name").innerHTML  = idSlice;
           socket.emit("make-room", idSlice, username);
           return;
         }
@@ -177,13 +182,6 @@
                 randomValue.value     = i / 100.0;
 
           randomFactor.appendChild(randomValue);
-        }
-        //add event listener to ready buttons
-        for (const player of ["player1", "player2"]){
-          const readyButton = document.getElementById(player + "-ready-button");
-          readyButton.addEventListener("click", () => {
-          readyButtonClicked(player);
-        });
         }
         //add onkeyup/onpaste to counts
         for (const cardType of cardTypes){
@@ -263,10 +261,9 @@
           return;
         }
     
-        myReadyButton                       = document.getElementById(player + "-ready-button");
-        myReadyButton.style.display         = "block";
-        myReadyButton.innerHTML             = "NOT READY";
-        myReadyButton.style.backgroundColor = "darkred";
+        readyButton.style.display         = "block";
+        readyButton.innerHTML             = "NOT READY";
+        readyButton.style.backgroundColor = "darkred";
 
         if (player === "player1"){
           startButton.style.visibility = "hidden";
@@ -354,8 +351,8 @@
        * @return {Boolean} Are both players ready
       */
       function checkIfBothReady() {
-        const player1 = document.getElementById("player1-connection").innerHTML;
-        const player2 = document.getElementById("player2-connection").innerHTML;
+        const player1 = document.getElementById("player1-status").innerHTML;
+        const player2 = document.getElementById("player2-status").innerHTML;
         return player1 === "READY" && player2 === "READY";
       }
 
@@ -363,13 +360,13 @@
        * Change own ready button to its opposite, and emit that change so opponent/viewer can see it
        * @param {String} player The player that clicked their ready button ["player1", "player2"]
       */
-      function readyButtonClicked(player) {
-        const ready = myReadyButton.innerHTML === "READY";
+      function readyButtonClicked() {
+        const ready = readyButton.innerHTML === "READY";
 
-        myReadyButton.innerHTML             = ready ? "NOT READY" : "READY";
-        myReadyButton.style.backgroundColor = ready ? "darkred"   : "darkgreen";
+        readyButton.innerHTML             = ready ? "NOT READY" : "READY";
+        readyButton.style.backgroundColor = ready ? "darkred"   : "darkgreen";
   
-        socket.emit("ready-change", myRoomName, player, myReadyButton.innerHTML);
+        socket.emit("ready-change", myRoomName, myRole, readyButton.innerHTML);
       }
 
       /**
@@ -535,6 +532,7 @@
 
         if (player2Name != ""){
           document.getElementById("player2-username").innerHTML = player2Name + ":";
+          document.getElementById("player2-status").innerHTML   = "NOT READY";
         }
 
         if (myRole != ""){ //already joined
@@ -547,10 +545,12 @@
         if (myRole === "viewer"){
           document.getElementById("viewer-player1-username").innerHTML = player1Name;
           document.getElementById("viewer-player2-username").innerHTML = player2Name;
+        } else {
+          document.getElementById(myRole + "-username").style.backgroundColor = "#bc5a84";
         }
 
         document.getElementById("room-screen").style.display    = "none";
-        document.getElementById("lobby-screen").style.display = "block";
+        document.getElementById("lobby-screen").style.display = "grid";
 
         makeMyComponents(playerRole); 
       });
@@ -562,7 +562,7 @@
 
       socket.on("opponent-left-lobby", () => {
         document.getElementById("player2-username").innerHTML = "";
-        document.getElementById("player2-connection").innerHTML = "NOT READY";
+        document.getElementById("player2-status").innerHTML = "NOT CONNECTED";
       });
 
       /**
@@ -599,7 +599,7 @@
        * @param {String} readyText Whether that player is now ready or not: READY, NOT READY
       */ 
       socket.on("ready-change", (player, readyText) => {
-        const readyTextComponent           = document.getElementById(player + "-connection");
+        const readyTextComponent           = document.getElementById(player + "-status");
               readyTextComponent.innerHTML = readyText;
         //if client is player1, additional check has to be done to see if both players are ready and start button should be shown
         if (myRole === "player2" || myRole === "viewer") {

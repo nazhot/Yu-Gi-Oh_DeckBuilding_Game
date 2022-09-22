@@ -43,3 +43,7 @@
 .type-count {
     display: block;
 }
+
+.player-span {
+    width: 100%;
+}
