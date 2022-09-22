@@ -78,8 +78,7 @@ const abilities = {
         rerolls: +2,
         turnsBeforeUseAbility: 1
       }, 
-      useAgainDelay : 3,
-      turnsUntilUseAgain: 3,
+      turnsUntilUseAgain: 4,
       canUse: true
     },
     "Long Term Success" : {

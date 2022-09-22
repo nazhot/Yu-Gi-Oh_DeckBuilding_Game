@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/public/css/style.css" />
     <link rel="stylesheet" href="/public/css/room-screen.css" />
-    <link rel="stylesheet" href="/public/css/loading-screen.css" />
+    <link rel="stylesheet" href="/public/css/lobby-screen.css" />
     <link rel="stylesheet" href="/public/css/playing-screen.css" />
     <link rel="stylesheet" href="/public/css/viewer-screen.css" />
   </head>
@@ -19,8 +19,8 @@
       <p> Rooms: </p>
       <ul id="rooms"></ul>
     </div>
-    <div id="loading-screen" style="display:none;">
-      <div id="player1-loading-side">
+    <div id="lobby-screen" style="display:none;">
+      <div id="player1-lobby-side">
         <p style="display: inline-block" id="player1-username"></p>
         <p id="player1-connection" style="display: inline-block;">NOT READY</p>
         <button id="player1-ready-button" class="ready-button" style="display: none;">NOT READY</button>
@@ -44,7 +44,7 @@
           <select id="random-factor"></select>
         </div>
       </div>
-      <div id="player2-loading-side">
+      <div id="player2-lobby-side">
         <p style="display: inline-block" id="player2-username"></p>
         <p id="player2-connection" style="display: inline-block">NOT READY</p>
         <button id="player2-ready-button" class="ready-button" style="display: none;">NOT READY</button>
@@ -524,7 +524,7 @@
       });
 
       /**
-       * Join an open room, and switch over to loading screen
+       * Join an open room, and switch over to lobby screen
        * @param {String} playerRole  Which role the emitting player has: player1, player2, viewer
        * @param {String} room        Id of the room being joined
        * @param {String} player1Name The username selected by player1, always set
@@ -550,14 +550,14 @@
         }
 
         document.getElementById("room-screen").style.display    = "none";
-        document.getElementById("loading-screen").style.display = "block";
+        document.getElementById("lobby-screen").style.display = "block";
 
         makeMyComponents(playerRole); 
       });
 
       /**
        * Sets player2 values back to their default
-       *  Emitted when the opponent left the loading screen of a game you started
+       *  Emitted when the opponent left the lobby screen of a game you started
       */ 
 
       socket.on("opponent-left-lobby", () => {
@@ -571,7 +571,7 @@
       */ 
       socket.on("room-closed", () => {       
         document.getElementById("room-screen").style.display    = "block";
-        document.getElementById("loading-screen").style.display = "none";
+        document.getElementById("lobby-screen").style.display = "none";
         document.getElementById("playing-screen").style.display = "none";
         document.getElementById("viewing-screen").style.display = "none";
         document.getElementById("player1-connection").innerHTML = "NOT READY";
@@ -652,7 +652,7 @@
       */ 
       socket.on("start-game", (abilitiesData) => {
  
-        document.getElementById("loading-screen").style.display = "none";
+        document.getElementById("lobby-screen").style.display = "none";
 
         if (myRole === "viewer"){
           document.getElementById("viewing-screen").style.display = "inline-block";

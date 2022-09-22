@@ -1,4 +1,4 @@
-#player1-loading-side {
+#player1-lobby-side {
     text-align: center;
     display: inline-block;
     width: 50vw;
@@ -8,7 +8,7 @@
     top: 0;
 }
 
-#player2-loading-side {
+#player2-lobby-side {
     text-align: center;
     display: inline-block;
     width: 50vw;
