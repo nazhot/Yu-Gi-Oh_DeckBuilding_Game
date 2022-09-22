@@ -78,6 +78,8 @@ const abilities = {
         rerolls: +2,
         turnsBeforeUseAbility: 1
       }, 
+      useAgainDelay : 3,
+      turnsUntilUseAgain: 3,
       canUse: true
     },
     "Long Term Success" : {
@@ -242,6 +244,7 @@ function getAbilityStatus(roomName){
                         abilities[ability].count() > 0 && //ability has ran out of uses
                        (playerData.rerolls + abilities[ability].targetMe.rerolls) >= 0 && //after using ability, user will not have negative rerolls
                         !abilities[ability].currentlyActive &&
+                        !(abilities[ability].turnsUntilUseAgain) && //if it doesn't exist, true, if it does exit and is greater than 0, false, if it does exist and is 0, true
                         !(roomData.status === "download"); //if it's in the download time, both decks full, no abilities
 
       abilityStatus[player][abilityId] = canUse;
@@ -408,6 +411,9 @@ function updateStatsAfterCardDraw(roomName, player){
         ability.currentlyActive = false;
         ability.function(roomName, player);
       }
+    }
+    if (ability.turnsUntilUseAgain) { //if it exists, and is greater than 0
+      ability.turnsUntilUseAgain--;
     }
   }
   
@@ -633,6 +639,10 @@ io.on("connection", (socket) => {
       } else {
         ability.function(roomName, player);
       }
+    }
+
+    if (ability.useAgainDelay){
+      ability.turnsUntilUseAgain = ability.useAgainDelay;
     }
 
     updateCardTypeCounts(roomName);
