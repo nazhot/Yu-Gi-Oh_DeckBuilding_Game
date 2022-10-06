@@ -276,8 +276,7 @@ function getDefaultPlayerData(playerName, role){
 
 function makeRoom(roomName, creatorId, creatorName){
   rooms[roomName] = {
-    playerList: [creatorId],
-    viewers:    0,
+    playerList: [{id: creatorId, name: creatorName}],
     totalCards: 0,
     status:     "waiting",
     player1:    creatorId,
@@ -470,6 +469,27 @@ function emitLogEvent(roomName, player, logToMe, logToOpponent){
   }
 }
 
+function emitPlayers(roomName){
+  const room = rooms[roomName];
+  const playerList = room.playerList;
+  const players = {
+    player1: "",
+    player2: "",
+    viewers: []
+  };
+
+  for (const playerObject of playerList){
+    if (playerObject.id === room.player1){
+      players.player1 = playerObject.name;
+    } else if (playerObject.ud === room.player2){
+      players.player2 = playerObject.name;
+    } else {
+      players.viewers.push(playerObject.name);
+    }
+  }
+  io.to(roomName).emit("player-list", players);
+}
+
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/index.html");
 });
@@ -502,7 +522,7 @@ io.on("connection", (socket) => {
     roomData[player2Id].opponentId  = player1Id;
     roomData.player1                = player1Id;
 
-    roomData.playerList.push(socket.id);
+    roomData.playerList.push({id: socket.id, name: joinerName});
     socket.join(roomName);
     io.to(roomName).emit("join-room", joinerRole, roomName, player1Name, player2Name);
   });
@@ -688,7 +708,7 @@ io.on("connection", (socket) => {
   socket.on("disconnecting", () => {
     for (const roomName in rooms){
       for (let i = 0; i < rooms[roomName].playerList.length; i++){
-        const id = rooms[roomName].playerList[i];
+        const id = rooms[roomName].playerList[i].id;
         if (id === socket.id){
           rooms[roomName].playerList.splice(i, 1);
           const role      = rooms[roomName][socket.id].role ;
