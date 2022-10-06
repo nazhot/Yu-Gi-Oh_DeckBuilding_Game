@@ -586,6 +586,28 @@
       });
 
       /**
+       * Gets the list of all players, player1, player2, and viewers
+        * Emitted whenever a viewer enters/leaves
+       * @param {Object} playerList Contains player information. Properties are player1, player2, and viewers
+       *                            {String} player1 Name of player1
+       *                            {String} player2 Name of player2
+       *                            {Object} viewers Array of names of the viewers
+      */ 
+      socket.on("player-list", (playerList)=> {
+        const viewerList = document.getElementById("viewer-list");
+        while (viewerList.lastChild){
+          viewerList.removeChild(viewerList.lastChild);
+        }
+        for (const viewer of playerList.viewers){
+          const viewerElement           = document.createElement("li");
+                viewerElement.innerHTML = viewer;
+
+          viewerList.appendChild(viewerElement);
+        }
+      });
+
+
+      /**
        * Sets player2 values back to their default
        *  Emitted when the opponent left the lobby screen of a game you started
       */ 
