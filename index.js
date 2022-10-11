@@ -276,7 +276,7 @@ function getDefaultPlayerData(playerName, role){
 
 function makeRoom(roomName, creatorId, creatorName){
   rooms[roomName] = {
-    playerList: [{id: creatorId, name: creatorName}],
+    playerList: [{id: creatorId, name: creatorName, role: "player1"}],
     totalCards: 0,
     status:     "waiting",
     player1:    creatorId,
@@ -481,7 +481,7 @@ function emitPlayers(roomName){
   for (const playerObject of playerList){
     if (playerObject.id === room.player1){
       players.player1 = playerObject.name;
-    } else if (playerObject.ud === room.player2){
+    } else if (playerObject.id === room.player2){
       players.player2 = playerObject.name;
     } else {
       players.viewers.push(playerObject.name);
@@ -522,8 +522,9 @@ io.on("connection", (socket) => {
     roomData[player2Id].opponentId  = player1Id;
     roomData.player1                = player1Id;
 
-    roomData.playerList.push({id: socket.id, name: joinerName});
+    roomData.playerList.push({id: socket.id, name: joinerName, role: joinerRole});
     socket.join(roomName);
+    emitPlayers(roomName);
     io.to(roomName).emit("join-room", joinerRole, roomName, player1Name, player2Name);
   });
 
@@ -710,10 +711,12 @@ io.on("connection", (socket) => {
       for (let i = 0; i < rooms[roomName].playerList.length; i++){
         const id = rooms[roomName].playerList[i].id;
         if (id === socket.id){
-          rooms[roomName].playerList.splice(i, 1);
-          const role      = rooms[roomName][socket.id].role ;
+          const role      = rooms[roomName].playerList[i].role;
           const isPlayer1 = role  === "player1";
+          //remove player from playerList in room
+          rooms[roomName].playerList.splice(i, 1);
           delete rooms[roomName][socket.id];
+          emitPlayers(roomName);
           if (rooms[roomName].players === 0 || isPlayer1 || (rooms[roomName].status === "playing" && role !== "viewer")){
             console.log(rooms[roomName].logText);
             io.to(roomName).emit("room-closed");

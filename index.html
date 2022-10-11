@@ -598,6 +598,7 @@
         while (viewerList.lastChild){
           viewerList.removeChild(viewerList.lastChild);
         }
+        viewerList.innerHTML = "Viewers:";
         for (const viewer of playerList.viewers){
           const viewerElement           = document.createElement("li");
                 viewerElement.innerHTML = viewer;
