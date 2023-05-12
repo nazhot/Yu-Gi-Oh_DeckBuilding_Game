@@ -9,7 +9,7 @@
 
 - [📖 Overview](#-overview)
 - [⭐️ Current Version](#-current-version)
-- [📜 Previous Verions](#-previous-versions)
+- [📜 Previous Versions](#-previous-versions)
 - [🔜 Hopeful Features](#-hopeful-features)
 - [🪚 Built With](#-built-with)
 - [🔨 Build Instructions](#-build-instructions)
@@ -40,7 +40,7 @@ v0.0.4
   - Attempting to make/join games after an opponent left your previous game caused multiple issues, now fixed
   - Players are able to see/reroll their last card
   
-## 📜 Previous Verions
+## 📜 Previous Versions
 v0.0.3
 - Added ability to host multiple games at once
   - Home screen is now the option to make or join a game
