@@ -1,8 +1,25 @@
+<p align="center">
+  <a href="https://noahzydel.com">
+    <img alt="Noah Logo" height="128" src="./.github/resources/NoahLogo.svg">
+    <h1 align="center">Noah Zydel</h1>
+  </a>
+</p>
+
+---
+
+- [📖 Overview](#-overview)
+- [⭐️ Current Version](#-current-version)
+- [📜 Previous Verions](#-previous-versions)
+- [🔜 Hopeful Features](#-hopeful-features)
+- [🪚 Built With](#-built-with)
+- [🔨 Build Instructions](#-build-instructions)
+
 # YuGiOh-DeckBuilding-Game
 A new take on Yu-Gi-Oh deck building, adding the element of randomness, some skill, tough choices, and an opponent to deal with.
 
 ## Overview
 A tool for adding another layer on top of the Yu-Gi-Oh card game! 2 players can go back and forth, getting random cards to compile their decks, with some interaction between opponents. This tool is meant to keep Yu-Gi-Oh fun by: taking a step back from the competitive side, generating decks more akin to playground-style duels, and turning deck building into an interactive game.
+
 ## Current Version
 v0.0.4
 - **Abilities Added**

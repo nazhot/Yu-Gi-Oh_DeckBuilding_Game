@@ -80,6 +80,7 @@
 .large-card {
     width: 75%;
     margin: 2% auto;
+    transition: transform 0.8s;
 }
 
 #draw-button {
@@ -124,4 +125,8 @@
   @keyframes fadein {
     from {opacity: 0;}
     to   {opacity: 1;}
+  }
+
+  .small-card:hover .large-card{
+    transform: rotateY(180deg);
   }

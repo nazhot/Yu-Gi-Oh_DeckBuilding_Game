@@ -4,11 +4,11 @@
     <title>Yu-Gi-Oh DeckBuilder</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="/public/css/style.css" />
-    <link rel="stylesheet" href="/public/css/room-screen.css" />
-    <link rel="stylesheet" href="/public/css/lobby-screen.css" />
-    <link rel="stylesheet" href="/public/css/playing-screen.css" />
-    <link rel="stylesheet" href="/public/css/viewer-screen.css" />
+    <link rel="stylesheet" href="public/css/style.css" />
+    <link rel="stylesheet" href="public/css/room-screen.css" />
+    <link rel="stylesheet" href="public/css/lobby-screen.css" />
+    <link rel="stylesheet" href="public/css/playing-screen.css" />
+    <link rel="stylesheet" href="public/css/viewer-screen.css" />
   </head>
   <body>
     <div id="room-screen">
@@ -17,6 +17,9 @@
       </form>
       <button id="make-room" onclick="makeRoom()">MAKE GAME</button>
       <p> Rooms: </p>
+      <div id="rooms-containter">
+
+      </div>
       <ul id="rooms"></ul>
     </div>
     <div id="lobby-screen" class="screen-container" style="display:none;">
@@ -80,7 +83,7 @@
         </div>
       </div>
       <div id="playing-card-panel" class="playing-panel">
-        <img src="/public/images/back.png" id="player-large-card" class="large-card"/>
+        <img src="public/images/back.png" id="player-large-card" class="large-card"/>
         <p id="ban-list-info"></p>
       </div>
       <div id="playing-bottom-bar">
@@ -102,10 +105,10 @@
         </div>
       </div>
       <div id="viewer-card-container">
-        <img src="/public/images/back.png" id="viewer-large-card" class="large-card" />
+        <img src="public/images/back.png" id="viewer-large-card" class="large-card" />
       </div>
     </div>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="node_modules/socket.io/client-dist/socket.io.js"></script>
     <script>
       let socket             = io();
       const roomNameLength   = 4;
@@ -118,8 +121,8 @@
       let   myRoomName       = "";
       let   myUsername       = "";
 
-      const largeImageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics/";
-      const smallImageApiPath = "https://storage.googleapis.com/ygoprodeck.com/pics_small/";
+      const largeImageApiPath = "https://images.ygoprodeck.com/images/cards/";
+      const smallImageApiPath = "https://images.ygoprodeck.com/images/cards_small/";
       const cardWidth         = "10%";
   
       const startButton        = document.getElementById("start-game-button");
@@ -390,6 +393,7 @@
         const newCard             = document.createElement("img");
               newCard.src         = largeCardImage;
               newCard.alt         = cardId;
+              newCard.className   = "small-card";
               newCard.style.width = cardWidth;
         //when moused over, show the image in the middle card
         //when not moused over, default to card back
@@ -414,7 +418,7 @@
         card.onmouseleave = () => {
           const largeCards = document.getElementsByClassName("large-card");
           for (const largeCard of largeCards){
-            largeCard.src = "/public/images/back.png";
+            largeCard.src = "public/images/back.png";
           }
           const cardLimitText = document.getElementById("ban-list-info");
           cardLimitText.innerHTML = "";

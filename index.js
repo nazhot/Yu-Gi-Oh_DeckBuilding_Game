@@ -117,7 +117,7 @@ function getCardType(cardData){
 
 function checkIfCardTypeValid(roomName, player, cardId, extraDeckAllowed){
   updateCardTypeCounts(roomName);
-  const data = cardData[cardId];
+  const data = cardData[cardId];  
 
   if (data === undefined) return false;
 
@@ -281,9 +281,6 @@ function makeRoom(roomName, creatorId, creatorName){
     status:     "waiting",
     player1:    creatorId,
     logText:        "-------------------------------\nLog file for " + roomName + "\n-------------------------------",
-    // log:        (text) => {
-    //   this.logText += "\n" + text;
-    // },
   };
   rooms[roomName][creatorId] = getDefaultPlayerData(creatorName, "player1");
 }
@@ -490,7 +487,7 @@ function emitPlayers(roomName){
   io.to(roomName).emit("player-list", players);
 }
 
-app.get("/", (req, res) => {
+app.get("/deck", (req, res) => {
   res.sendFile(__dirname + "/index.html");
 });
 
