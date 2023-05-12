@@ -17,10 +17,10 @@
 # YuGiOh-DeckBuilding-Game
 A new take on Yu-Gi-Oh deck building, adding the element of randomness, some skill, tough choices, and an opponent to deal with.
 
-## Overview
+## 📖 Overview
 A tool for adding another layer on top of the Yu-Gi-Oh card game! 2 players can go back and forth, getting random cards to compile their decks, with some interaction between opponents. This tool is meant to keep Yu-Gi-Oh fun by: taking a step back from the competitive side, generating decks more akin to playground-style duels, and turning deck building into an interactive game.
 
-## Current Version
+## ⭐️ Current Version
 v0.0.4
 - **Abilities Added**
   - Russian Roulette
@@ -40,7 +40,7 @@ v0.0.4
   - Attempting to make/join games after an opponent left your previous game caused multiple issues, now fixed
   - Players are able to see/reroll their last card
   
-## Previous Versions
+## 📜 Previous Verions
 v0.0.3
 - Added ability to host multiple games at once
   - Home screen is now the option to make or join a game
@@ -73,7 +73,7 @@ v0.0.1
  - Viewers are allowed
   - See both players full decks, prone to cheating if you are a dishonest cotton headed mini muffin
 
-## Hopeful Features
+## 🔜 Hopeful Features
 - Less ugly
 - Have username information stored for repeated connecting
 - Global settings for player 1 to set
@@ -91,12 +91,12 @@ v0.0.1
   - Swap chosen cards
   - Draw multiple cards next turn, opponent can't use powerups
   
-## Built With
+## 🪚 Built With
 - node.js
 - express.js
 - socket.io
 
-## Build Instructions
+## 🔨 Build Instructions
 After forking and cloning, navigate to the repository in your command line and install the NPM packages:
 ```
 npm install
