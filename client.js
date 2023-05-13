@@ -1,5 +1,5 @@
 const socket           = io(); //comment out for server
-//const socket = io("https://noahzydel.com", {path: "/wagersocket/"});
+//const socket = io("https://noahzydel.com", {path: "/decksocket/"});
 const roomNameLength   = 4;
 let numRerolls         = 5;
 const listNames        = ["card", "ban", "set"]; //names used to get all dropdown information
