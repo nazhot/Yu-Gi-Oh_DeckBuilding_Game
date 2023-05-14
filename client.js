@@ -1,18 +1,18 @@
 const socket           = io(); //comment out for server
 //const socket = io("https://noahzydel.com", {path: "/decksocket/"});
-const roomNameLength   = 4;
-let numRerolls         = 5;
+const roomNameLength   = 4; //how long the room id should be
+let numRerolls         = 5; //number of rerolls to start with. Just used for initial display purposes, server handles actual tracking //TODO: remove the need for this initial value (provide via the server)
 const listNames        = ["card", "ban", "set"]; //names used to get all dropdown information
 const cardTypes        = ["Spells", "Traps", "Normal Monsters", "Effect Monsters"];
 const dropDowns        = {}; //holder for the three drop down elements, since they're so similar in name
-const cardTypeElements = {};
-let   myRole           = "";
-let   myRoomName       = "";
-let   myUsername       = "";
+const cardTypeElements = {}; //holder for the different text boxes for inputting how many of each card type you want
+let   myRole           = ""; //role that the client has (player1, player2, or viewer)
+let   myRoomName       = ""; //unique room id that is (roomNameLength) chars long, based on the socket id of the host
+let   myUsername       = ""; //client-picked name that is displayed to the lobby
 
 const largeImageApiPath = "https://images.ygoprodeck.com/images/cards/";
 const smallImageApiPath = "https://images.ygoprodeck.com/images/cards_small/";
-const cardWidth         = "10%";
+const cardWidth         = "10%"; //card width within the deck container (10% means 10 cards in every row, 20% means 5, etc)
 
 const startButton        = document.getElementById("start-game-button");
 const readyButton        = document.getElementById("ready-button");
@@ -38,27 +38,28 @@ function makeRoom(){
     roomList.push(elementList[i].innerHTML);
   }
 
+  //create the unique room id
+  let idSlice = "";
   for (let i = 0; i < socket.id.length - roomNameLength; i += roomNameLength){
 
-    const idSlice = socket.id.slice(i, i + roomNameLength);
+    idSlice = socket.id.slice(i, i + roomNameLength);
 
-    if (roomList.includes(idSlice)){
-      continue;
+    if (!roomList.includes(idSlice)){
+      break;
     }
+  }
 
-    let username = prompt("Please enter your name");
+  myUsername = prompt("Please enter your name");
 
-    if (username === null){
-      return;
-    }
-
-    username   = username ? username : "Lame-o";
-    myUsername = username;
-    
-    document.getElementById("lobby-room-name").innerHTML  = idSlice;
-    socket.emit("make-room", idSlice, username);
+  if (myUsername === null){
     return;
   }
+
+  myUsername   = myUsername ? myUsername : "Lame-o";
+  
+  document.getElementById("lobby-room-name").innerHTML  = idSlice;
+  socket.emit("make-room", idSlice, myUsername);
+  return;
 }
 
 /**
