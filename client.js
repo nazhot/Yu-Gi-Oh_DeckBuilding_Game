@@ -289,9 +289,10 @@ function setDrawnCard(playerSide, largeCardImage, cardId, limit) {
         newCard.alt         = cardId;
         newCard.className   = "small-card";
         newCard.style.width = cardWidth;
+        newCard.limit       = limit;
   //when moused over, show the image in the middle card
   //when not moused over, default to card back
-  setCardMouseEvents(newCard, limit);
+  setCardMouseEvents(newCard);
   playerSide.appendChild(newCard);
 }
 
@@ -300,11 +301,11 @@ function setDrawnCard(playerSide, largeCardImage, cardId, limit) {
  * @param {Object} card  The card element to add the functions to
  * @param {Number} limit How many of the card is allowed per ban list
 */
-function setCardMouseEvents(card, limit){
+function setCardMouseEvents(card){
   card.onmouseover = () => {
     const largeCards              = document.getElementsByClassName("large-card");
     const cardLimitText           = document.getElementById("ban-list-info");
-          cardLimitText.innerHTML = "Number of Cards Allowed: " + limit;
+          cardLimitText.innerHTML = "Number of Cards Allowed: " + card.limit;
 
     for (const largeCard of largeCards){
       largeCard.src = card.src;
@@ -337,10 +338,9 @@ function getExpectedDeckSize(){
   let isValid    = true;
   for (const cardType of cardTypes){
     const componentCardType = cleanCardType(cardType, "-");
-    const textBox = document.getElementById(componentCardType + "-count");
-    const value   = textBox.value;
-
-    totalCount += Math.floor(value);
+    const textBox           = document.getElementById(componentCardType + "-count");
+    const value             = textBox.value;
+          totalCount       += Math.floor(value);
 
     if (isNaN(value)){
       textBox.style.backgroundColor = "red";
@@ -420,6 +420,7 @@ function download(filename, text) {
 function joinRoom(roomName){
   let username = prompt("Please enter your name");
       username = username ? username : "Lame-o";
+
   if (username === null){
       return;
   }
@@ -494,10 +495,13 @@ socket.on("join-room", (playerRole, room, player1Name, player2Name) => {
 */ 
 socket.on("player-list", (playerList)=> {
   const viewerList = document.getElementById("viewer-list");
+
   while (viewerList.lastChild){
     viewerList.removeChild(viewerList.lastChild);
   }
+
   viewerList.innerHTML = "Viewers:";
+
   for (const viewer of playerList.viewers){
     const viewerElement           = document.createElement("li");
           viewerElement.innerHTML = viewer;
@@ -513,7 +517,7 @@ socket.on("player-list", (playerList)=> {
 */ 
 socket.on("opponent-left-lobby", () => {
   document.getElementById("player2-username").innerHTML = "";
-  document.getElementById("player2-status").innerHTML = "NOT CONNECTED";
+  document.getElementById("player2-status").innerHTML   = "NOT CONNECTED";
 });
 
 /**
@@ -522,7 +526,7 @@ socket.on("opponent-left-lobby", () => {
 */ 
 socket.on("room-closed", () => {       
   document.getElementById("room-screen").style.display    = "block";
-  document.getElementById("lobby-screen").style.display = "none";
+  document.getElementById("lobby-screen").style.display   = "none";
   document.getElementById("playing-screen").style.display = "none";
   document.getElementById("viewing-screen").style.display = "none";
   document.getElementById("player1-connection").innerHTML = "NOT READY";
@@ -562,7 +566,7 @@ socket.on("ready-change", (player, readyText) => {
 
   if (bothReady && deckSize >= 40 && deckSize <= 60) {
     startButton.style.visibility = "visible";
-    startButton.style.display = "block";
+    startButton.style.display    = "block"; 
   } else {
     startButton.style.visibility = "hidden";
   }
@@ -661,18 +665,13 @@ socket.on("draw-card", (player, drawCard, limit) => {
  * @param {String} player          Player that did the rerolling: player1, player2
 */ 
 socket.on("reroll", (newCardId, limit, newCardPosition, player) => {
-  const showCard = (myRole === "viewer" || myRole === player);
-
-  if (!showCard){
-    return;
-  }
-
   const containerForCard = myRole === "viewer" ? document.getElementById("viewer-" + player + "-deck-container") : deckContainer;
-
   const rerolledCard     = containerForCard.children[newCardPosition];
         rerolledCard.src = largeImageApiPath + newCardId + ".jpg";
         rerolledCard.alt = newCardId;
-  setCardMouseEvents(rerolledCard, limit);
+        rerolledCard.limit = limit;
+
+  setCardMouseEvents(rerolledCard);
 });
 
 /**

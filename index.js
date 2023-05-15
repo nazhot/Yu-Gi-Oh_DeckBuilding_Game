@@ -450,7 +450,8 @@ function updateStatsAfterCardDraw(roomName, player){
 
 function rerollCard(roomName, player, cardToReroll){
   const roomData    = rooms[roomName];
-  const playerData  = roomData[roomData[player]];
+  const playerId   = roomData[player];
+  const playerData  = roomData[playerId];
   const playerCards = playerData.cards;
 
   if (cardToReroll === -1){
@@ -464,7 +465,7 @@ function rerollCard(roomName, player, cardToReroll){
   playerCards[cardToReroll] = drawCard;
   updateCardTypeCounts(roomName);
   emitPlayerDataChanges(roomName);
-  io.to(roomName).emit("reroll", drawCard, roomData.banList[drawCard] === undefined ? 3 : roomData.banList[drawCard], cardToReroll, player);
+  io.to(playerId).emit("reroll", drawCard, roomData.banList[drawCard] === undefined ? 3 : roomData.banList[drawCard], cardToReroll, player);
   return {drawCard, cardToReroll};
 }
 
