@@ -704,10 +704,8 @@ socket.on("log-update", (logInformation) => {
  * @param {String} player Whose data it is
  * @param {String} data   Information on card types in deck
 */
-socket.on("card-type-data", (player, data) => {
-  if (myRole === player){
+socket.on("card-type-data", (data) => {
     document.getElementById("deck-data").innerHTML = data;
-  }
 });
 
 /**

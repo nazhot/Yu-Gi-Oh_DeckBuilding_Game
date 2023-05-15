@@ -471,7 +471,8 @@ function rerollCard(roomName, player, cardToReroll){
 
 function emitCardTypeData(roomName, player){
   const roomData = rooms[roomName];
-  const myData   = roomData[roomData[player]];
+  const playerId = roomData[player];
+  const myData   = roomData[playerId];
   let data = "";
   for (const cardType of cardTypes){
     const propCardType = cleanCardType(cardType, "");
@@ -480,7 +481,7 @@ function emitCardTypeData(roomName, player){
     }
     data += cardType + ": " + myData[propCardType + "Used"] + "/"+ myData[propCardType + "Allowed"];
   }
-  io.to(roomName).emit("card-type-data", player, data);
+  io.to(playerId).emit("card-type-data", data);
 }
 
 function emitLogEvent(roomName, player, logToMe, logToOpponent){
