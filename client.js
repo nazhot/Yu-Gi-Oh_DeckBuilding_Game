@@ -73,7 +73,7 @@ function cleanCardType(cardType, replace){
 }
 
 /**
- * Do all one-time things needed when client first connects: set dropdowns andadd event listeners
+ * Do all one-time things needed when client first connects: set dropdowns and add event listeners
 */
 function firstTimeSetup(){
   //set random factor
@@ -103,7 +103,7 @@ function firstTimeSetup(){
 
   drawButton.addEventListener("click", () => {
     socket.emit("draw-card", myRoomName, myRole);
-    drawButton.style.visibility = "hidden";
+    drawButton.style.visibility   = "hidden";
     rerollButton.style.visibility = "hidden";
   });
 
@@ -138,35 +138,36 @@ function firstTimeSetup(){
   joinRoomForm.addEventListener("submit", (e) => {
     e.preventDefault();
     const roomInput = document.getElementById("join-room-input");
-    if (roomInput.value){
-      const roomList = document.getElementById("rooms").getElementsByTagName("li");
-      for (let i = 0; i < roomList.length; i++){
-        const room = roomList[i].innerHTML;
-        if (roomInput.value === room){
-          joinRoom(room);
-          return;
-        }
-      }
-      alert("No room found with name " + roomInput.value);
+    if (!roomInput.value) {
+      return;
     }
+
+    const roomList = document.getElementById("rooms").getElementsByTagName("li");
+    for (let i = 0; i < roomList.length; i++){
+      const room = roomList[i].innerHTML;
+      if (roomInput.value === room){
+        joinRoom(room);
+        return;
+      }
+    }
+    alert("No room found with name " + roomInput.value);
   });
 }
 
 
 /**
- * Set ready button and start button (if applicable) for the player
- * @param  {String} player "player1", "player2", or "viewer", the player that is setting the components
+ * Set ready button and start button (if applicable) for the player based on their role
 */
-function makeMyComponents(player){
+function makeMyComponents(){
 
-  if (player === "viewer"){
+  if (myRole === "viewer"){
     return;
   }
 
   readyButton.innerHTML             = "NOT READY";
   readyButton.style.backgroundColor = "darkred";
 
-  if (player === "player1"){
+  if (myRole === "player1"){
     startButton.style.visibility = "hidden";
     startButton.style.display    = "block";
     document.getElementById("variable-game-settings-container").style.display = "grid";
