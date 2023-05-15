@@ -171,8 +171,10 @@ function makeMyComponents(){
     startButton.style.visibility = "hidden";
     startButton.style.display    = "block";
     document.getElementById("variable-game-settings-container").style.display = "grid";
-  } else {
+  } else if (myRole == "player2" ){
     document.getElementById("game-settings-container").style.display = "grid";
+  } else {
+    console.log("Attempted to make components, but myRole is not correct");
   }
 }
 
@@ -187,18 +189,21 @@ function makeToolTipText(abilityData){
   const targetOpponent = abilityData.targetOpponent;
 
   for (const trait in targetMe){
-    const value = targetMe[trait];
-    toolText += "•" +  trait + ": " + value + "<br />";
+    const value     = targetMe[trait];
+          toolText += "•" +  trait + ": " + value + "<br />";
   }
-  console.log(targetOpponent);
-  if (targetOpponent !== undefined){
-    toolText += "<br />Opponent";
+
+  if (targetOpponent === undefined){
+    return toolText;
   }
+
+  toolText += "<br />Opponent";
   
   for (const trait in targetOpponent){
-    const value = targetOpponent[trait];
-    toolText += "<br />•" +  trait + ": " + value;
+    const value     = targetOpponent[trait];
+          toolText += "<br />•" +  trait + ": " + value;
   }
+
   return toolText;
 }
 
