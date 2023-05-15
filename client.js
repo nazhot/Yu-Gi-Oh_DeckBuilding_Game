@@ -231,8 +231,6 @@ function makeAbilityComponent(abilityName, abilityData, abilityNumber){
 
   newAbility.appendChild(newAbilityToolTip);              
   bottomNavBar.appendChild(newAbility);
-  
-  
 }
 
 /**
@@ -304,12 +302,13 @@ function setDrawnCard(playerSide, largeCardImage, cardId, limit) {
 */
 function setCardMouseEvents(card, limit){
   card.onmouseover = () => {
-    const largeCards = document.getElementsByClassName("large-card");
+    const largeCards              = document.getElementsByClassName("large-card");
+    const cardLimitText           = document.getElementById("ban-list-info");
+          cardLimitText.innerHTML = "Number of Cards Allowed: " + limit;
+
     for (const largeCard of largeCards){
       largeCard.src = card.src;
     }
-    const cardLimitText = document.getElementById("ban-list-info");
-    cardLimitText.innerHTML = "Number of Cards Allowed: " + limit;
   };
   card.onmouseleave = () => {
     const largeCards = document.getElementsByClassName("large-card");
